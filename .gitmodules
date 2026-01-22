@@ -1,0 +1,27 @@
+[submodule "whoami"]
+	path = whoami
+	url = https://github.com/nilvanlopes/whoami.git
+[submodule "cloudflare_tunnel"]
+	path = cloudflare_tunnel
+	url = https://github.com/nilvanlopes/cloudflare_tunnel.git
+[submodule "traefik"]
+	path = traefik
+	url = https://github.com/nilvanlopes/traefik.git
+[submodule "n8n"]
+	path = n8n
+	url = https://github.com/nilvanlopes/n8n.git
+[submodule "foundry"]
+	path = foundry
+	url = https://github.com/nilvanlopes/foundry.git
+[submodule "portainer"]
+	path = portainer
+	url = https://github.com/nilvanlopes/portainer.git
+[submodule "authentik"]
+	path = authentik
+	url = https://github.com/nilvanlopes/authentik.git
+[submodule "crowdsec"]
+	path = crowdsec
+	url = https://github.com/nilvanlopes/crowdsec.git
+[submodule "waha"]
+	path = waha
+	url = https://github.com/nilvanlopes/waha.git
