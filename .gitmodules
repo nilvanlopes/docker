@@ -25,3 +25,6 @@
 [submodule "waha"]
 	path = waha
 	url = https://github.com/nilvanlopes/waha.git
+[submodule "excalidraw"]
+	path = excalidraw
+	url = https://github.com/nilvanlopes/excalidraw.git
