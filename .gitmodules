@@ -31,3 +31,6 @@
 [submodule "qbittorrent"]
 	path = qbittorrent
 	url = https://github.com/nilvanlopes/qbittorrent.git
+[submodule "stremio"]
+	path = stremio
+	url = https://github.com/nilvanlopes/stremio.git
