@@ -7,6 +7,7 @@ TUNNEL_COMPOSE := cloudflare_tunnel/docker-compose.yml
 TRAEFIK_COMPOSE := traefik/docker-compose.yml
 TRAEFIK_ENV := traefik/.env
 PORTAINER_COMPOSE := portainer/docker-compose.yml
+PORTAINER_ENV := portainer/.env
 FOUNDRY_COMPOSE := foundry/docker-compose.yml
 CROWDSEC_COMPOSE := crowdsec/docker-compose.yml
 CROWDSEC_ENV := crowdsec/.env
@@ -22,6 +23,7 @@ help:
 	@echo "Comandos disponíveis:"
 	@echo "  make deploy            - Deploy todos os stacks na ordem"
 	@echo "  make deploy-tunnel     - Deploy apenas cloudflare tunnel"
+QBITTORRENT_COMPOSE := qbittorrent/docker-compose.yml
 	@echo "  make deploy-traefik    - Deploy apenas traefik"
 	@echo "  make deploy-authentik  - Deploy apenas authentik"
 	@echo "  make deploy-crowdsec   - Deploy apenas crowdsec"
@@ -33,11 +35,12 @@ help:
 	@echo "  make logs-<stack>      - Mostra logs do stack"
 	@echo "  make restart-<stack>   - Reinicia o stack"
 
-deploy: setup-traefik-network  setup-n8n-network deploy-tunnel deploy-traefik deploy-authentik deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha
+deploy: setup-traefik-network  setup-n8n-network deploy-tunnel deploy-traefik deploy-authentik deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent
 	@echo "✓ Todos os stacks deployados com sucesso!"
 
 setup-traefik-network:
 	@docker network create --driver=overlay --attachable traefik-public 2>/dev/null || true
+	@echo "  make deploy-qbittorrent - Deploy apenas qbittorrent"
 	@echo "✓ Rede traefik-public configurada"
 
 setup-n8n-network:
@@ -62,7 +65,7 @@ deploy-crowdsec:
 
 deploy-portainer:
 	@echo ">>> Deploying portainer..."
-	docker stack deploy --detach=true -c $(PORTAINER_COMPOSE) portainer
+	(set -a && source $(PORTAINER_ENV) && set +a && docker stack deploy --detach=true -c $(PORTAINER_COMPOSE) portainer)
 
 deploy-foundry:
 	@echo ">>> Deploying foundry..."
@@ -97,8 +100,13 @@ logs-traefik:
 logs-authentik:
 	docker service logs -f authentik_authentik
 
+deploy-qbittorrent:
+	@echo ">>> Deploying qbittorrent..."
+	docker stack deploy --detach=true -c $(QBITTORRENT_COMPOSE) qbittorrent
+
 logs-crowdsec:
 	docker service logs -f crowdsec_crowdsec
+	-docker stack rm qbittorrent
 
 logs-portainer:
 	docker service logs -f portainer_portainer
@@ -107,7 +115,7 @@ logs-foundry:
 	docker service logs -f foundry_foundry
 
 logs-n8n:
-	docker service logs -f n8n_n8n
+	docker service logs -f n8n_n8n-main
 
 logs-waha:
 	docker service logs -f waha_waha
@@ -131,7 +139,13 @@ restart-foundry:
 	docker service update --force foundry_foundry
 
 restart-n8n:
-	docker service update --force n8n_n8n
+	docker service update --force n8n_n8n-main
 
 restart-waha:
 	docker service update --force waha_waha
+logs-qbittorrent:
+	docker service logs -f qbittorrent_qbittorrent
+
+
+restart-qbittorrent:
+	docker service update --force qbittorrent_qbittorrent
