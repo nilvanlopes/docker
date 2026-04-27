@@ -45,7 +45,7 @@ help:
 	@echo "  make logs-<stack>      - Mostra logs do stack"
 	@echo "  make restart-<stack>   - Reinicia o stack"
 
-deploy: setup-traefik-network  setup-n8n-network deploy-tunnel deploy-traefik deploy-authentik deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent
+deploy: setup-traefik-network setup-n8n-network deploy-tunnel deploy-traefik deploy-authentik deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent
 	@echo "✓ Todos os stacks deployados com sucesso!"
 
 setup-traefik-network:
