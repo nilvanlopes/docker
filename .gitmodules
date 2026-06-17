@@ -34,3 +34,6 @@
 [submodule "stremio"]
 	path = stremio
 	url = https://github.com/nilvanlopes/stremio.git
+[submodule "fred"]
+	path = fred
+	url = https://github.com/nilvanlopes/fredApi.git
