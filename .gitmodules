@@ -37,3 +37,6 @@
 [submodule "fred"]
 	path = fred
 	url = https://github.com/nilvanlopes/fredApi.git
+[submodule "ollama"]
+	path = ollama
+	url = https://github.com/nilvanlopes/ollama.git
