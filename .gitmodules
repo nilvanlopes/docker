@@ -43,3 +43,6 @@
 [submodule "job-application-automation"]
 	path = job-application-automation
 	url = https://github.com/nilvanlopes/job-application-automation.git
+[submodule "honcho"]
+	path = honcho
+	url = https://github.com/nilvanlopes/honcho.git
