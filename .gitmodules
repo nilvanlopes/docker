@@ -40,3 +40,6 @@
 [submodule "ollama"]
 	path = ollama
 	url = https://github.com/nilvanlopes/ollama.git
+[submodule "job-application-automation"]
+	path = job-application-automation
+	url = https://github.com/nilvanlopes/job-application-automation.git
