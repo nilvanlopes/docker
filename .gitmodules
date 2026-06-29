@@ -46,3 +46,6 @@
 [submodule "honcho"]
 	path = honcho
 	url = https://github.com/nilvanlopes/honcho.git
+[submodule "meu-site"]
+	path = meu-site
+	url = https://github.com/nilvanlopes/meu-site.git
