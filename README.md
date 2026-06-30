@@ -11,6 +11,7 @@ This repository contains a collection of docker-compose configurations for vario
 *   [portainer](https://github.com/nilvanlopes/portainer)
 *   [traefik](https://github.com/nilvanlopes/traefik)
 *   [waha](https://github.com/nilvanlopes/waha)
+*   [honcho](./honcho)
 *   [whoami](https://github.com/nilvanlopes/whoami)
 
 ## Usage
@@ -51,6 +52,7 @@ The following is a breakdown of the services and their interactions:
 
 *   **n8n**: A workflow automation tool. It is exposed through Traefik and can be protected by Authentik. It has its own database (PostgreSQL) and Redis instance.
 *   **Waha**: A WhatsApp API gateway. It is connected to the `n8n` network, which suggests that it is used in n8n workflows.
+*   **Honcho**: AI-native memory backend for Hermes, hosted locally on the Swarm and reachable by the local Hermes process at `http://127.0.0.1:8000`.
 *   **whoami**: A simple service that returns information about the request. It is used for testing and debugging Traefik configurations.
 
 ### Network and Data Flow
@@ -94,5 +96,6 @@ The `make deploy` command deploys the services in the following order:
 5.  `portainer`
 6.  `n8n`
 7.  `waha`
+8.  `honcho`
 
 This order ensures that the core infrastructure is up and running before the applications are deployed.
