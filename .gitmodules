@@ -49,3 +49,6 @@
 [submodule "meu-site"]
 	path = meu-site
 	url = https://github.com/nilvanlopes/meu-site.git
+[submodule "curriculum-optimizer"]
+	path = curriculum-optimizer
+	url = https://github.com/nilvanlopes/curriculum-optimizer.git
