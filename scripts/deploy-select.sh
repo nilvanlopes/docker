@@ -20,21 +20,47 @@ ORDER=(
   excalidraw
   stremio
   whoami
+  ollama
+  job-application-automation-ollama
   fred
   curriculum-optimizer
 )
 
 is_running_stack() {
-  docker stack ls --format '{{.Name}}' 2>/dev/null | grep -qx "$1"
+  local stack="$1"
+  local replicas running desired
+
+  while read -r replicas; do
+    [[ -n "$replicas" ]] || continue
+    running="${replicas%%/*}"
+    desired="${replicas##*/}"
+
+    if [[ "$desired" =~ ^[0-9]+$ && "$running" =~ ^[0-9]+$ && "$desired" -gt 0 && "$running" -lt "$desired" ]]; then
+      return 1
+    fi
+  done < <(docker stack services "$stack" --format '{{.Replicas}}' 2>/dev/null)
+
+  docker stack services "$stack" --format '{{.Replicas}}' 2>/dev/null | grep -q '^[1-9][0-9]*/[1-9][0-9]*$'
 }
 
 is_running_compose() {
   local dir="$1"
-  (cd "$dir" && docker compose ps --services --filter status=running 2>/dev/null | grep -q .)
+  shift
+  (cd "$dir" && docker compose "$@" ps --services --filter status=running 2>/dev/null | grep -q .)
+}
+
+is_running_container() {
+  docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$1"
+}
+
+is_running_ollama_provider() {
+  is_running_container ollama-local || is_running_container job-application-automation-ollama
 }
 
 service_is_running() {
   case "$1" in
+    ollama) is_running_ollama_provider ;;
+    job-application-automation-ollama) is_running_ollama_provider ;;
     fred) is_running_compose fred ;;
     curriculum-optimizer) is_running_compose curriculum-optimizer ;;
     *) is_running_stack "$1" ;;
@@ -60,6 +86,8 @@ deploy_one() {
     excalidraw) "$MAKE_CMD" --no-print-directory deploy-excalidraw ;;
     stremio) "$MAKE_CMD" --no-print-directory deploy-stremio ;;
     whoami) "$MAKE_CMD" --no-print-directory deploy-whoami ;;
+    ollama) "$MAKE_CMD" --no-print-directory deploy-ollama ;;
+    job-application-automation-ollama) "$MAKE_CMD" --no-print-directory deploy-job-application-automation-ollama ;;
     fred) "$MAKE_CMD" --no-print-directory deploy-fred ;;
     curriculum-optimizer) "$MAKE_CMD" --no-print-directory deploy-curriculum-optimizer ;;
     *)

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help all deploy deploy-tunnel deploy-traefik deploy-authentik deploy-foundry-signup deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-honcho deploy-excalidraw deploy-stremio deploy-whoami deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-honcho logs-excalidraw logs-stremio logs-whoami logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-honcho restart-excalidraw restart-stremio restart-whoami restart-fred restart-curriculum-optimizer
+.PHONY: help all deploy deploy-tunnel deploy-traefik deploy-authentik deploy-foundry-signup deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-honcho deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-honcho logs-excalidraw logs-stremio logs-whoami logs-ollama logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-honcho restart-excalidraw restart-stremio restart-whoami restart-ollama restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
 
 # Caminhos dos arquivos compose e variáveis de ambiente
 TUNNEL_COMPOSE := cloudflare_tunnel/docker-compose.yml
@@ -31,8 +31,13 @@ HONCHO_COMPOSE := honcho/docker-compose.yml
 HONCHO_ENV := honcho/.env
 EXCALIDRAW_COMPOSE := excalidraw/docker-compose.yml
 STREMIO_COMPOSE := stremio/docker-compose.yml
+STREMIO_WEB_DIR := stremio/stremio-web
+STREMIO_WEB_IMAGE := stremio-web-official:development
 WHOAMI_COMPOSE := whoami/docker-compose.yml
 WHOAMI_ENV := whoami/.env
+OLLAMA_DIR := ollama
+JOB_APPLICATION_AUTOMATION_DIR := job-application-automation
+JOB_APPLICATION_AUTOMATION_OLLAMA_COMPOSE := docker-compose.ollama.yml
 CURRICULUM_OPTIMIZER_COMPOSE := curriculum-optimizer/docker-compose.yml
 CURRICULUM_OPTIMIZER_DIR := curriculum-optimizer
 FRED_DIR := fred
@@ -59,6 +64,8 @@ help:
 	@echo "  make deploy-excalidraw - Deploy apenas excalidraw"
 	@echo "  make deploy-stremio    - Deploy apenas stremio"
 	@echo "  make deploy-whoami     - Deploy apenas whoami"
+	@echo "  make deploy-ollama     - Deploy apenas ollama local"
+	@echo "  make deploy-job-application-automation-ollama - Deploy do Ollama gerenciado pelo job-application-automation"
 	@echo "  make deploy-fred      - Deploy apenas fred"
 	@echo "  make deploy-curriculum-optimizer - Deploy local do curriculum-optimizer"
 	@echo "  make deploy SERVICES=\"all\" - Deploy não-interativo de tudo"
@@ -150,12 +157,46 @@ deploy-excalidraw:
 	docker stack deploy --detach=true -c $(EXCALIDRAW_COMPOSE) excalidraw
 
 deploy-stremio:
+	@echo ">>> Ensuring local swarm is initialized..."
+	@if [[ "$$(docker info --format '{{.Swarm.ControlAvailable}}')" != "true" ]]; then \
+		advertise_addr="$${SWARM_ADVERTISE_ADDR:-$$(ip -o -4 addr show dev eth0 | awk '{split($$4,a,"/"); print a[1]; exit}')}"; \
+		if [[ -z "$${advertise_addr}" ]]; then \
+			echo "ERRO: não foi possível descobrir o IP da eth0; defina SWARM_ADVERTISE_ADDR." >&2; \
+			exit 1; \
+		fi; \
+		docker swarm init --advertise-addr "$${advertise_addr}"; \
+	fi
+	@if [[ "$$(docker info --format '{{.Swarm.ControlAvailable}}')" != "true" ]]; then \
+		echo "ERRO: este node não virou swarm manager; deploy-stremio abortado." >&2; \
+		exit 1; \
+	fi
+	@echo ">>> Pausing stale stremio web tasks..."
+	-docker service scale stremio_stremio-web=0
+	@echo ">>> Building stremio web image..."
+	docker build --build-arg COMMIT_HASH="$$(git -C $(STREMIO_WEB_DIR) rev-parse HEAD 2>/dev/null || echo local)" -t $(STREMIO_WEB_IMAGE) $(STREMIO_WEB_DIR)
+	docker image inspect $(STREMIO_WEB_IMAGE) >/dev/null
 	@echo ">>> Deploying stremio..."
-	docker stack deploy --detach=true -c $(STREMIO_COMPOSE) stremio
+	docker stack deploy --detach=true --resolve-image never -c $(STREMIO_COMPOSE) stremio
 
 deploy-whoami: setup-traefik-network
 	@echo ">>> Deploying whoami..."
 	(set -a && source $(WHOAMI_ENV) && set +a && docker stack deploy --detach=true -c $(WHOAMI_COMPOSE) whoami)
+
+deploy-ollama:
+	@echo ">>> Deploying ollama..."
+	@if docker ps --format '{{.Names}}' | grep -qx 'job-application-automation-ollama'; then \
+		echo ">>> job-application-automation-ollama já fornece localhost:11434; pulando ollama."; \
+	else \
+		(cd $(OLLAMA_DIR) && docker compose up -d); \
+	fi
+
+deploy-job-application-automation-ollama:
+	@echo ">>> Deploying job-application-automation ollama..."
+	@if docker ps --format '{{.Names}}' | grep -qx 'ollama-local'; then \
+		echo ">>> ollama-local já fornece localhost:11434; pulando job-application-automation-ollama."; \
+	else \
+		(cd $(JOB_APPLICATION_AUTOMATION_DIR) && docker compose -f $(JOB_APPLICATION_AUTOMATION_OLLAMA_COMPOSE) up -d); \
+	fi
 
 deploy-fred: setup-traefik-local-network
 	@echo ">>> Deploying fred..."
@@ -185,6 +226,8 @@ down:
 	-docker stack rm stremio
 	-docker stack rm whoami
 	-docker stack rm fred
+	-(cd $(OLLAMA_DIR) && docker compose down)
+	-(cd $(JOB_APPLICATION_AUTOMATION_DIR) && docker compose -f $(JOB_APPLICATION_AUTOMATION_OLLAMA_COMPOSE) down)
 	-(cd $(FRED_DIR) && docker compose down)
 	-(cd $(CURRICULUM_OPTIMIZER_DIR) && docker compose down)
 	@echo "✓ Stacks removidos"
@@ -240,6 +283,12 @@ logs-stremio:
 logs-whoami:
 	docker service logs -f whoami_whoami
 
+logs-ollama:
+	(cd $(OLLAMA_DIR) && docker compose logs -f)
+
+logs-job-application-automation-ollama:
+	(cd $(JOB_APPLICATION_AUTOMATION_DIR) && docker compose -f $(JOB_APPLICATION_AUTOMATION_OLLAMA_COMPOSE) logs -f)
+
 logs-fred:
 	(cd $(FRED_DIR) && docker compose logs -f)
 
@@ -292,10 +341,18 @@ restart-excalidraw:
 	docker service update --force excalidraw_excalidraw-canvas
 
 restart-stremio:
+	docker build -t $(STREMIO_WEB_IMAGE) $(STREMIO_WEB_DIR)
 	docker service update --force stremio_stremio-server
+	docker service update --force stremio_stremio-web
 
 restart-whoami:
 	docker service update --force whoami_whoami
+
+restart-ollama:
+	(cd $(OLLAMA_DIR) && docker compose restart)
+
+restart-job-application-automation-ollama:
+	(cd $(JOB_APPLICATION_AUTOMATION_DIR) && docker compose -f $(JOB_APPLICATION_AUTOMATION_OLLAMA_COMPOSE) restart)
 
 restart-fred:
 	(cd $(FRED_DIR) && docker compose restart)
