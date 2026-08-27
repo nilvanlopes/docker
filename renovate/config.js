@@ -43,6 +43,7 @@ module.exports = {
   branchConcurrentLimit: 10,
   prHourlyLimit: 2,
   rebaseWhen: 'behind-base-branch',
+  minimumReleaseAge: '7 days',
 
   packageRules: [
     {
