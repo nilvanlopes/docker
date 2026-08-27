@@ -58,6 +58,7 @@ Após a ativação inicial, o workflow roda automaticamente toda segunda-feira �
 ## Política aplicada
 
 - atualizações de Docker Compose e Dockerfile são detectadas centralmente;
+- somente os gerenciadores `docker-compose` e `dockerfile` ficam habilitados;
 - imagens passam a ser acompanhadas por digest;
 - major versions ficam bloqueadas inicialmente;
 - PostgreSQL, Redis, Authentik, WAHA, n8n e Ollama nunca fazem merge automático;

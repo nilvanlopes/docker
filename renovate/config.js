@@ -31,6 +31,7 @@ module.exports = {
   onboarding: false,
   requireConfig: 'optional',
   dependencyDashboard: true,
+  enabledManagers: ['docker-compose', 'dockerfile'],
 
   extends: [
     'config:recommended',
