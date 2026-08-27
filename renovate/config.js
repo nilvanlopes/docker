@@ -7,6 +7,7 @@
  */
 module.exports = {
   platform: 'github',
+  gitAuthor: 'Nilvan Lopes <28903634+nilvanlopes@users.noreply.github.com>',
   repositories: [
     'nilvanlopes/authentik',
     'nilvanlopes/cloudflare_tunnel',
