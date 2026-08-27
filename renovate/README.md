@@ -7,12 +7,47 @@ repositórios dos submódulos sem exigir uma configuração repetida em cada um.
 
 ## Ativação
 
-1. Criar um token do GitHub para o usuário/bot que administrará os repositórios.
-   Ele precisa conseguir ler e criar branches/PRs nos repositórios monitorados.
-2. Cadastrar esse token no repositório `nilvanlopes/docker` como Secret chamado
-   `RENOVATE_TOKEN`.
-3. Executar o workflow manualmente em **Actions > Renovate > Run workflow**.
-4. Conferir o primeiro Dependency Dashboard e os PRs criados.
+### 1. Criar o token do GitHub
+
+No GitHub, abra **Settings > Developer settings > Personal access tokens >
+Fine-grained tokens** e clique em **Generate new token**.
+
+Use uma validade definida e selecione os repositórios que aparecem em
+[`../renovate-config.js`](../renovate-config.js). Para este workflow, conceda:
+
+- **Metadata**: `Read-only`;
+- **Contents**: `Read and write`;
+- **Pull requests**: `Read and write`;
+- **Issues**: `Read and write` (necessário para o Dependency Dashboard).
+
+O token precisa pertencer a uma conta que tenha acesso de escrita a todos os
+repositórios monitorados. Para repositórios de uma organização, a organização
+também pode exigir aprovação do administrador.
+
+Copie o token imediatamente após sua criação. O GitHub não o exibe novamente.
+
+### 2. Cadastrar `RENOVATE_TOKEN` no repositório
+
+No repositório `nilvanlopes/docker`:
+
+1. Abra **Settings**;
+2. No menu lateral, abra **Secrets and variables > Actions**;
+3. Clique em **New repository secret**;
+4. Em **Name**, informe exatamente `RENOVATE_TOKEN`;
+5. Cole o token em **Secret**;
+6. Clique em **Add secret**.
+
+O token deve ser cadastrado como **Repository secret**, não como variável
+pública. Nunca coloque seu valor em `renovate-config.js`, em um compose ou em
+um commit.
+
+### 3. Executar o workflow
+
+Abra **Actions > Renovate > Run workflow** e execute-o manualmente. Depois,
+confira o **Dependency Dashboard** e os PRs criados nos repositórios monitorados.
+
+Após a ativação inicial, o workflow roda automaticamente toda segunda-feira às
+03:00 UTC (00:00 no horário de São Paulo).
 
 O token não deve ser colocado em arquivo, compose ou variável versionada.
 
