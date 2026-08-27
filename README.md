@@ -1,101 +1,158 @@
-# My Dockerized Services by Nilvan Lopes
+# Serviços Docker
 
-This repository contains a collection of docker-compose configurations for various self-hosted services. Each service is contained in its own directory and can be deployed independently.
+Repositório de orquestração do ambiente pessoal de serviços self-hosted de
+Nilvan Lopes. Cada diretório de serviço é um submódulo Git; o repositório raiz
+centraliza os arquivos Compose, as redes compartilhadas e os comandos de
+deploy, logs e reinício.
 
-## Services
+## Conteúdo
 
-*   [authentik](https://github.com/nilvanlopes/authentik)
-*   [cloudflare_tunnel](https://github.com/nilvanlopes/cloudflare_tunnel)
-*   [crowdsec](https://github.com/nilvanlopes/crowdsec)
-*   [n8n](https://github.com/nilvanlopes/n8n)
-*   [portainer](https://github.com/nilvanlopes/portainer)
-*   [traefik](https://github.com/nilvanlopes/traefik)
-*   [waha](https://github.com/nilvanlopes/waha)
-*   [honcho](./honcho)
-*   [whoami](https://github.com/nilvanlopes/whoami)
+### Infraestrutura e serviços publicados
 
-## Usage
+| Diretório | Função |
+| --- | --- |
+| [`traefik`](./traefik) | Reverse proxy, TLS e descoberta de serviços no Swarm |
+| [`cloudflare_tunnel`](./cloudflare_tunnel) | Túnel Cloudflare até o Traefik |
+| [`authentik`](./authentik) | Identidade e autenticação, incluindo outposts |
+| [`crowdsec`](./crowdsec) | Detecção e bloqueio de tráfego malicioso |
+| [`portainer`](./portainer) | Administração do Docker Swarm |
+| [`n8n`](./n8n) | Automação de workflows com PostgreSQL e Redis |
+| [`waha`](./waha) | API HTTP para WhatsApp |
+| [`fred`](./fred) | API do Vôlei Frederico e processamento de conversas |
+| [`foundry`](./foundry) | Foundry Virtual Tabletop |
+| [`authentik/foundry-signup`](./authentik/foundry-signup) | Página de cadastro do Foundry |
+| [`qbittorrent`](./qbittorrent) | Cliente BitTorrent |
+| [`honcho`](./honcho) | Backend de memória local do Hermes |
+| [`excalidraw`](./excalidraw) | Canvas para o MCP do Excalidraw |
+| [`stremio`](./stremio) | Stremio Server e interface web local |
+| [`whoami`](./whoami) | Serviço de teste das rotas do Traefik |
 
-To deploy a service, navigate to its directory and run:
+### Ferramentas locais e projetos relacionados
+
+- [`ollama`](./ollama): Ollama local com suporte à GPU.
+- [`job-application-automation`](./job-application-automation): automação de
+  candidaturas; também contém uma opção Compose para seu Ollama.
+- [`curriculum-optimizer`](./curriculum-optimizer): geração e validação de
+  currículos via IA.
+- [`meu-site`](./meu-site): código do site pessoal.
+- [`renovate`](./renovate): configuração centralizada de atualizações.
+- [`scripts`](./scripts): seleção de deploy e recuperação do estado do Docker.
+
+Os diretórios de serviço possuem instruções próprias quando há configuração
+adicional ou variáveis obrigatórias.
+
+## Pré-requisitos
+
+- Docker instalado e, para os serviços Swarm, um node manager com o Swarm
+  inicializado.
+- Arquivos `.env` preenchidos conforme os `.env.example` existentes em cada
+  serviço. Segredos não devem ser commitados.
+- `whiptail` para o seletor interativo de `make deploy`.
+- Para o primeiro checkout, inicialize os submódulos:
 
 ```bash
-docker-compose up -d
+git clone --recurse-submodules <url-do-repositorio>
 ```
 
-Please refer to the `README.md` file in each service's directory for more specific instructions.
+Em um clone existente:
 
-## Architecture and Container Interactions
+```bash
+git submodule update --init --recursive
+```
 
-This repository is a monorepo containing the configurations for a set of self-hosted services, all running in a Docker Swarm environment. The services are designed to work together to provide a secure and robust platform for hosting web applications.
+## Deploy
 
-The core of the architecture is **Traefik**, a modern reverse proxy and load balancer. All incoming traffic is routed through Traefik, which then directs it to the appropriate service. Traefik also handles SSL termination, using Let's Encrypt to automatically provision and renew SSL certificates. The certificates are resolved using Cloudflare DNS.
+Os serviços publicados usam Docker Swarm. O `make deploy` cria as redes
+externas `traefik-public`, `traefik-local` e `n8n` e abre um seletor interativo
+com os serviços que ainda não estão em execução.
 
-The services are exposed to the internet via **Cloudflare Tunnel**, which creates a secure tunnel between the Cloudflare network and the Docker Swarm. This allows the services to be accessible from the internet without exposing the host server directly.
+```bash
+# No diretório raiz deste repositório
+make deploy
 
-Authentication and authorization are handled by **Authentik**, an open-source identity provider. Authentik is used to protect the services that should not be publicly accessible. When a user tries to access a protected service, Traefik redirects them to Authentik to log in. Once authenticated, Authentik sends the user back to the service with a valid session.
+# Deploy não interativo de tudo, na ordem definida em scripts/deploy-select.sh
+make deploy SERVICES=all
 
-**CrowdSec** is used to protect the services from malicious actors. CrowdSec is a collaborative intrusion detection system that analyzes the logs from Traefik to detect and block attacks. It uses a bouncer integrated with Traefik to block malicious IP addresses at the edge.
+# Selecionar serviços específicos, mantendo a ordem do orquestrador
+make deploy SERVICES="traefik authentik n8n waha"
+```
 
-**Portainer** provides a web-based UI for managing the Docker Swarm environment. It allows for easy monitoring and management of the containers, services, and stacks.
+Também é possível executar um alvo individual. Os nomes abaixo correspondem
+aos alvos definidos no [`makefile`](./makefile):
 
-The following is a breakdown of the services and their interactions:
+```text
+deploy-tunnel
+deploy-traefik
+deploy-authentik
+deploy-foundry-signup
+deploy-authentik-outpost-traefik
+deploy-authentik-outpost-portainer
+deploy-authentik-outpost-foundry
+deploy-crowdsec
+deploy-portainer
+deploy-foundry
+deploy-n8n
+deploy-waha
+deploy-qbittorrent
+deploy-honcho
+deploy-excalidraw
+deploy-stremio
+deploy-whoami
+deploy-ollama
+deploy-job-application-automation-ollama
+deploy-fred
+deploy-curriculum-optimizer
+```
 
-### Core Infrastructure
+Exemplos:
 
-*   **Traefik**: The entry point for all traffic. It is responsible for routing, load balancing, and SSL termination. It is configured to work with Docker Swarm, automatically discovering and configuring new services as they are deployed.
-*   **Cloudflare Tunnel**: Exposes the services to the internet through a secure tunnel to the Cloudflare network. It is configured to forward all traffic to Traefik.
-*   **Authentik**: Provides authentication and authorization for the services. It is integrated with Traefik to protect the services that are not public.
-*   **CrowdSec**: A security tool that monitors Traefik's logs to detect and block malicious IPs. It consists of the CrowdSec agent, which analyzes the logs, and a bouncer, which blocks the IPs in Traefik.
-*   **Portainer**: A management UI for Docker Swarm. It is used to monitor and manage the containers.
+```bash
+make deploy-fred
+make deploy-stremio
+make deploy-curriculum-optimizer
+```
 
-### Applications
+`deploy-stremio` constrói a imagem local
+`stremio-web-official:development` a partir do submódulo
+[`stremio/stremio-web`](./stremio/stremio-web) antes de publicar a stack.
+`deploy-fred` constrói a API antes do deploy. O alvo do Ollama usa Compose
+local e evita subir uma segunda instância quando já existe um provedor Ollama
+em execução.
 
-*   **n8n**: A workflow automation tool. It is exposed through Traefik and can be protected by Authentik. It has its own database (PostgreSQL) and Redis instance.
-*   **Waha**: A WhatsApp API gateway. It is connected to the `n8n` network, which suggests that it is used in n8n workflows.
-*   **Honcho**: AI-native memory backend for Hermes, hosted locally on the Swarm and reachable by the local Hermes process at `http://127.0.0.1:8000`.
-*   **whoami**: A simple service that returns information about the request. It is used for testing and debugging Traefik configurations.
+## Operação
 
-### Network and Data Flow
+```bash
+# Ver ajuda e alvos disponíveis
+make help
 
-1.  A user accesses a service via a domain name managed by Cloudflare.
-2.  Cloudflare routes the request through the **Cloudflare Tunnel** to the Docker Swarm.
-3.  The **Cloudflare Tunnel** forwards the request to **Traefik**.
-4.  **Traefik** analyzes the request and determines which service to route it to based on the domain name.
-5.  If the service is protected by **Authentik**, Traefik redirects the user to Authentik for authentication.
-6.  Once authenticated, the user is redirected back to the service.
-7.  All traffic to Traefik is logged and analyzed by **CrowdSec**. If a malicious IP is detected, it is blocked by the CrowdSec bouncer in Traefik.
-8.  The services themselves run in their own Docker networks, and they are only exposed to the outside world through Traefik.
+# Logs de um serviço Swarm
+make logs-traefik
+make logs-fred
 
-This architecture provides a secure, scalable, and easy-to-manage platform for self-hosting a variety of services.
+# Reiniciar um serviço
+make restart-n8n
+make restart-stremio
 
-## Makefile Usage
+# Remover as stacks e os Compose locais gerenciados por este repositório
+make down
+```
 
-This repository includes a `Makefile` to simplify the management of the Docker Swarm stacks. The `Makefile` provides commands to deploy, update, and manage the services.
+`make down` remove os serviços, mas não apaga os volumes persistentes. Para
+operações específicas, consulte o README do respectivo submódulo.
 
-### Prerequisites
+## Arquitetura resumida
 
-Before using the `Makefile`, ensure that you have a Docker Swarm cluster running and that you have configured the necessary environment variables for each service.
+Traefik é o ponto de entrada HTTP/HTTPS e usa as redes overlay externas
+`traefik-public` e `traefik-local`. O Cloudflare Tunnel encaminha o tráfego
+externo ao Traefik; Authentik protege rotas privadas; CrowdSec analisa os logs
+do Traefik e fornece o bloqueio pelo bouncer.
 
-### Commands
+O n8n usa PostgreSQL, Redis e a rede externa `n8n`. O WAHA e o Fred integram-se
+aos workflows do n8n pela rede local. Honcho mantém sua própria API,
+PostgreSQL/pgvector, Redis e serviço de embeddings. Os demais serviços são
+publicados por suas respectivas stacks e redes descritas nos Compose locais.
 
-*   `make help`: Displays a list of available commands.
-*   `make deploy`: Deploys all the stacks in the correct order. This command will also create the necessary Docker networks (`traefik-public` and `n8n`) if they don't exist.
-*   `make deploy-<stack>`: Deploys a specific stack. Replace `<stack>` with the name of the service you want to deploy (e.g., `make deploy-traefik`).
-*   `make down`: Removes all the stacks from the Docker Swarm.
-*   `make logs-<stack>`: Tails the logs of a specific service. Replace `<stack>` with the name of the service (e.g., `make logs-traefik`).
-*   `make restart-<stack>`: Forcefully restarts a specific service. Replace `<stack>` with the name of the service (e.g., `make restart-traefik`).
-
-### Deployment Order
-
-The `make deploy` command deploys the services in the following order:
-
-1.  `cloudflare-tunnel`
-2.  `traefik`
-3.  `authentik`
-4.  `crowdsec`
-5.  `portainer`
-6.  `n8n`
-7.  `waha`
-8.  `honcho`
-
-This order ensures that the core infrastructure is up and running before the applications are deployed.
+Nem tudo é uma stack Swarm: Ollama, `curriculum-optimizer` e os modos locais
+de Fred/job-application-automation usam `docker compose`; o site pessoal e o
+job-application-automation também podem ser executados pelos seus próprios
+fluxos de desenvolvimento.
