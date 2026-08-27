@@ -19,5 +19,5 @@ jobs:
         uses: renovatebot/github-action@v46.2.1
         env:
           LOG_LEVEL: info
-          RENOVATE_CONFIG_FILE: ${{ github.workspace }}/renovate-config.js
+          RENOVATE_CONFIG_FILE: ${{ github.workspace }}/renovate/config.js
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}

@@ -2,7 +2,7 @@
 
 O workflow [`../.github/workflows/renovate.yml`](../.github/workflows/renovate.yml)
 executa o Renovate uma vez por semana e também pode ser iniciado manualmente.
-Ele lê [`../renovate-config.js`](../renovate-config.js) e monitora os
+Ele lê [`config.js`](config.js) e monitora os
 repositórios dos submódulos sem exigir uma configuração repetida em cada um.
 
 ## Ativação
@@ -13,7 +13,7 @@ No GitHub, abra **Settings > Developer settings > Personal access tokens >
 Fine-grained tokens** e clique em **Generate new token**.
 
 Use uma validade definida e selecione os repositórios que aparecem em
-[`../renovate-config.js`](../renovate-config.js). Para este workflow, conceda:
+[`config.js`](config.js). Para este workflow, conceda:
 
 - **Metadata**: `Read-only`;
 - **Contents**: `Read and write`;
@@ -38,8 +38,8 @@ No repositório `nilvanlopes/docker`:
 6. Clique em **Add secret**.
 
 O token deve ser cadastrado como **Repository secret**, não como variável
-pública. Nunca coloque seu valor em `renovate-config.js`, em um compose ou em
-um commit.
+pública. Nunca coloque seu valor em `config.js`, em um compose ou em um
+commit.
 
 ### 3. Executar o workflow
 
@@ -48,8 +48,6 @@ confira o **Dependency Dashboard** e os PRs criados nos repositórios monitorado
 
 Após a ativação inicial, o workflow roda automaticamente toda segunda-feira às
 03:00 UTC (00:00 no horário de São Paulo).
-
-O token não deve ser colocado em arquivo, compose ou variável versionada.
 
 ## Política aplicada
 
