@@ -1,0 +1,23 @@
+name: Renovate
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout configuration
+        uses: actions/checkout@v6.1.0
+
+      - name: Run Renovate centrally
+        uses: renovatebot/github-action@v46.2.1
+        env:
+          LOG_LEVEL: info
+          RENOVATE_CONFIG_FILE: ${{ github.workspace }}/renovate-config.js
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
