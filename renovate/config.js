@@ -48,8 +48,15 @@ module.exports = {
 
   packageRules: [
     {
-      description: 'Permitir updates Docker sem timestamp do registry',
+      description: 'Contornar stability-days incorreto para digests Docker',
       matchDatasources: ['docker'],
+      matchUpdateTypes: ['digest', 'pinDigest'],
+      minimumReleaseAgeBehaviour: 'timestamp-optional',
+    },
+    {
+      description: 'Permitir versões de registries Docker sem timestamp',
+      matchDatasources: ['docker'],
+      matchPackageNames: ['/^ghcr\\.io\\//', '/^lscr\\.io\\//'],
       minimumReleaseAgeBehaviour: 'timestamp-optional',
     },
     {
