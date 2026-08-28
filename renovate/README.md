@@ -20,7 +20,9 @@ Use uma validade definida e selecione os repositórios que aparecem em
 - **Pull requests**: `Read and write`;
 - **Issues**: `Read and write` (necessário para o Dependency Dashboard).
 - **Commit statuses**: `Read and write` (necessário para publicar o status das
-  branches do Renovate).
+  branches do Renovate);
+- **Dependabot alerts**: `Read-only` (necessário para o Renovate consultar
+  alertas de vulnerabilidade habilitados nos repositórios).
 
 O token precisa pertencer a uma conta que tenha acesso de escrita a todos os
 repositórios monitorados. Para repositórios de uma organização, a organização
@@ -28,7 +30,8 @@ também pode exigir aprovação do administrador.
 
 Se o token já foi criado, edite-o em **Settings > Developer settings > Personal
 access tokens > Fine-grained tokens**, adicione **Commit statuses: Read and
-write** e salve. Não é necessário criar outro token se ele puder ser editado.
+write** e **Dependabot alerts: Read-only**, e salve. Não é necessário criar
+outro token se ele puder ser editado.
 
 Copie o token imediatamente após sua criação. O GitHub não o exibe novamente.
 
