@@ -48,9 +48,8 @@ module.exports = {
 
   packageRules: [
     {
-      description: 'Contornar stability-days incorreto para digests Docker',
+      description: 'Permitir updates Docker sem timestamp do registry',
       matchDatasources: ['docker'],
-      matchUpdateTypes: ['digest', 'pinDigest'],
       minimumReleaseAgeBehaviour: 'timestamp-optional',
     },
     {
