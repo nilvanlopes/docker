@@ -48,6 +48,12 @@ module.exports = {
 
   packageRules: [
     {
+      description: 'Contornar stability-days incorreto para digests Docker',
+      matchDatasources: ['docker'],
+      matchUpdateTypes: ['digest', 'pinDigest'],
+      minimumReleaseAgeBehaviour: 'timestamp-optional',
+    },
+    {
       description: 'Não atualizar major versions automaticamente',
       matchManagers: ['docker-compose', 'dockerfile'],
       matchUpdateTypes: ['major'],
