@@ -45,6 +45,13 @@ module.exports = {
   prHourlyLimit: 2,
   rebaseWhen: 'behind-base-branch',
   minimumReleaseAge: '7 days',
+  logLevelRemap: [
+    {
+      matchMessage:
+        "/Some .+ did not have a releaseTimestamp, but as we're running with minimumReleaseAgeBehaviour=timestamp-optional, proceeding/",
+      newLogLevel: 'info',
+    },
+  ],
 
   packageRules: [
     {
