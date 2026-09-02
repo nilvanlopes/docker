@@ -16,7 +16,6 @@ ORDER=(
   n8n
   waha
   qbittorrent
-  honcho
   excalidraw
   stremio
   whoami
@@ -82,7 +81,6 @@ deploy_one() {
     n8n) "$MAKE_CMD" --no-print-directory deploy-n8n ;;
     waha) "$MAKE_CMD" --no-print-directory deploy-waha ;;
     qbittorrent) "$MAKE_CMD" --no-print-directory deploy-qbittorrent ;;
-    honcho) "$MAKE_CMD" --no-print-directory deploy-honcho ;;
     excalidraw) "$MAKE_CMD" --no-print-directory deploy-excalidraw ;;
     stremio) "$MAKE_CMD" --no-print-directory deploy-stremio ;;
     whoami) "$MAKE_CMD" --no-print-directory deploy-whoami ;;
@@ -100,12 +98,34 @@ deploy_one() {
 deploy_list() {
   local requested=" $1 "
   local svc
+  local -a pids=()
+  local failed=0
 
   for svc in "${ORDER[@]}"; do
     if [[ "$requested" == *" $svc "* ]]; then
-      deploy_one "$svc"
+      case "$svc" in
+        # These two Compose projects compete for localhost:11434. Keep them
+        # out of the parallel batch and let their existing guards decide.
+        ollama|job-application-automation-ollama) continue ;;
+      esac
+      deploy_one "$svc" &
+      pids+=("$!")
     fi
   done
+
+  for pid in "${pids[@]}"; do
+    if ! wait "$pid"; then
+      failed=1
+    fi
+  done
+
+  for svc in ollama job-application-automation-ollama; do
+    if [[ "$requested" == *" $svc "* ]]; then
+      deploy_one "$svc" || failed=1
+    fi
+  done
+
+  return "$failed"
 }
 
 if [[ -n "${SERVICES:-}" ]]; then

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help all deploy deploy-tunnel deploy-traefik deploy-authentik deploy-foundry-signup deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-honcho deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-honcho logs-excalidraw logs-stremio logs-whoami logs-ollama logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-honcho restart-excalidraw restart-stremio restart-whoami restart-ollama restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
+.PHONY: help all deploy deploy-tunnel deploy-traefik deploy-authentik deploy-foundry-signup deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-excalidraw logs-stremio logs-whoami logs-ollama logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-excalidraw restart-stremio restart-whoami restart-ollama restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
 
 # Caminhos dos arquivos compose e variáveis de ambiente
 TUNNEL_COMPOSE := cloudflare_tunnel/docker-compose.yml
@@ -27,8 +27,6 @@ N8N_ENV := n8n/.env
 WAHA_COMPOSE := waha/docker-compose.yml
 WAHA_ENV := waha/.env
 QBITTORRENT_COMPOSE := qbittorrent/docker-compose.yml
-HONCHO_COMPOSE := honcho/docker-compose.yml
-HONCHO_ENV := honcho/.env
 EXCALIDRAW_COMPOSE := excalidraw/docker-compose.yml
 STREMIO_COMPOSE := stremio/docker-compose.yml
 STREMIO_WEB_DIR := stremio/stremio-web
@@ -60,7 +58,6 @@ help:
 	@echo "  make deploy-n8n        - Deploy apenas n8n"
 	@echo "  make deploy-waha       - Deploy apenas waha"
 	@echo "  make deploy-qbittorrent - Deploy apenas qbittorrent"
-	@echo "  make deploy-honcho     - Deploy apenas honcho"
 	@echo "  make deploy-excalidraw - Deploy apenas excalidraw"
 	@echo "  make deploy-stremio    - Deploy apenas stremio"
 	@echo "  make deploy-whoami     - Deploy apenas whoami"
@@ -147,11 +144,6 @@ deploy-qbittorrent:
 	@echo ">>> Deploying qbittorrent..."
 	docker stack deploy --detach=true -c $(QBITTORRENT_COMPOSE) qbittorrent
 
-deploy-honcho:
-	@echo ">>> Deploying honcho..."
-	@if ! grep -q '^LLM_OPENAI_API_KEY=.' $(HONCHO_ENV); then echo "ERRO: preencha LLM_OPENAI_API_KEY em $(HONCHO_ENV) antes do deploy"; exit 1; fi
-	(set -a && source $(HONCHO_ENV) && set +a && docker stack deploy --detach=true -c $(HONCHO_COMPOSE) honcho)
-
 deploy-excalidraw:
 	@echo ">>> Deploying excalidraw..."
 	docker stack deploy --detach=true -c $(EXCALIDRAW_COMPOSE) excalidraw
@@ -209,7 +201,6 @@ deploy-curriculum-optimizer:
 down:
 	@echo ">>> Removendo todos os stacks..."
 	-docker stack rm qbittorrent
-	-docker stack rm honcho
 	-docker stack rm foundry
 	-docker stack rm portainer
 	-docker stack rm traefik
@@ -271,9 +262,6 @@ logs-waha:
 logs-qbittorrent:
 	docker service logs -f qbittorrent_qbittorrent
 
-logs-honcho:
-	docker service logs -f honcho_api
-
 logs-excalidraw:
 	docker service logs -f excalidraw_excalidraw-canvas
 
@@ -333,9 +321,6 @@ restart-waha:
 
 restart-qbittorrent:
 	docker service update --force qbittorrent_qbittorrent
-
-restart-honcho:
-	docker service update --force honcho_api
 
 restart-excalidraw:
 	docker service update --force excalidraw_excalidraw-canvas

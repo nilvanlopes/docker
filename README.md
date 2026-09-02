@@ -22,7 +22,6 @@ deploy, logs e reinício.
 | [`foundry`](./foundry) | Foundry Virtual Tabletop |
 | [`authentik/foundry-signup`](./authentik/foundry-signup) | Página de cadastro do Foundry |
 | [`qbittorrent`](./qbittorrent) | Cliente BitTorrent |
-| [`honcho`](./honcho) | Backend de memória local do Hermes |
 | [`excalidraw`](./excalidraw) | Canvas para o MCP do Excalidraw |
 | [`stremio`](./stremio) | Stremio Server e interface web local |
 | [`whoami`](./whoami) | Serviço de teste das rotas do Traefik |
@@ -94,7 +93,6 @@ deploy-foundry
 deploy-n8n
 deploy-waha
 deploy-qbittorrent
-deploy-honcho
 deploy-excalidraw
 deploy-stremio
 deploy-whoami
@@ -148,9 +146,8 @@ externo ao Traefik; Authentik protege rotas privadas; CrowdSec analisa os logs
 do Traefik e fornece o bloqueio pelo bouncer.
 
 O n8n usa PostgreSQL, Redis e a rede externa `n8n`. O WAHA e o Fred integram-se
-aos workflows do n8n pela rede local. Honcho mantém sua própria API,
-PostgreSQL/pgvector, Redis e serviço de embeddings. Os demais serviços são
-publicados por suas respectivas stacks e redes descritas nos Compose locais.
+aos workflows do n8n pela rede local. Os demais serviços são publicados por
+suas respectivas stacks e redes descritas nos Compose locais.
 
 Nem tudo é uma stack Swarm: Ollama, `curriculum-optimizer` e os modos locais
 de Fred/job-application-automation usam `docker compose`; o site pessoal e o
