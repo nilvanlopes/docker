@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help all deploy deploy-tunnel deploy-traefik deploy-authentik deploy-foundry-signup deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-excalidraw logs-stremio logs-whoami logs-ollama logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-excalidraw restart-stremio restart-whoami restart-ollama restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
+.PHONY: help all deploy force-stack-services deploy-tunnel deploy-traefik deploy-authentik deploy-foundry-signup deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-excalidraw logs-stremio logs-whoami logs-ollama logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-excalidraw restart-stremio restart-whoami restart-ollama restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
 
 # Caminhos dos arquivos compose e variáveis de ambiente
 TUNNEL_COMPOSE := cloudflare_tunnel/docker-compose.yml
@@ -78,6 +78,14 @@ deploy: setup-traefik-network setup-traefik-local-network setup-n8n-network
 all:
 	@:
 
+force-stack-services:
+	@test -n "$(STACK)" || { echo "ERRO: STACK é obrigatório." >&2; exit 1; }
+	@echo ">>> Forcing update of $(STACK) services..."
+	@docker stack services "$(STACK)" --format '{{.Name}}' | while read -r service; do \
+		[ -n "$$service" ] || continue; \
+		docker service update --force "$$service" >/dev/null; \
+	done
+
 setup-traefik-network:
 	@docker network create --driver=overlay --attachable traefik-public 2>/dev/null || true
 	@echo "✓ Rede traefik-public configurada"
@@ -93,60 +101,74 @@ setup-n8n-network:
 deploy-tunnel:
 	@echo ">>> Deploying cloudflare_tunnel..."
 	docker stack deploy --detach=true -c $(TUNNEL_COMPOSE) tunnel
+	$(MAKE) --no-print-directory force-stack-services STACK=tunnel
 
 deploy-traefik: setup-traefik-network setup-traefik-local-network
 	@echo ">>> Deploying traefik..."
 	(set -a && source $(TRAEFIK_ENV) && set +a && docker stack deploy --detach=true -c $(TRAEFIK_COMPOSE) traefik)
+	$(MAKE) --no-print-directory force-stack-services STACK=traefik
 
 deploy-authentik:
 	@echo ">>> Deploying authentik..."
 	(set -a && source $(AUTHENTIK_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_COMPOSE) authentik)
+	$(MAKE) --no-print-directory force-stack-services STACK=authentik
 
 deploy-foundry-signup: setup-traefik-network
 	@echo ">>> Building foundry signup image..."
 	docker build -t foundry-signup:latest $(FOUNDRY_SIGNUP_DIR)
 	@echo ">>> Deploying foundry signup..."
 	(set -a && source $(FOUNDRY_SIGNUP_ENV) && set +a && docker stack deploy --detach=true -c $(FOUNDRY_SIGNUP_COMPOSE) foundry-signup)
+	$(MAKE) --no-print-directory force-stack-services STACK=foundry-signup
 
 deploy-authentik-outpost-traefik: setup-traefik-network
 	@echo ">>> Deploying authentik outpost for traefik..."
 	(set -a && source $(AUTHENTIK_OUTPOST_TRAEFIK_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_OUTPOST_TRAEFIK_COMPOSE) authentik-outpost-traefik)
+	$(MAKE) --no-print-directory force-stack-services STACK=authentik-outpost-traefik
 
 deploy-authentik-outpost-portainer: setup-traefik-network
 	@echo ">>> Deploying authentik outpost for portainer..."
 	(set -a && source $(AUTHENTIK_OUTPOST_PORTAINER_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_OUTPOST_PORTAINER_COMPOSE) authentik-outpost-portainer)
+	$(MAKE) --no-print-directory force-stack-services STACK=authentik-outpost-portainer
 
 deploy-authentik-outpost-foundry: setup-traefik-network
 	@echo ">>> Deploying authentik outpost for foundry..."
 	(set -a && source $(AUTHENTIK_OUTPOST_FOUNDRY_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_OUTPOST_FOUNDRY_COMPOSE) authentik-outpost-foundry)
+	$(MAKE) --no-print-directory force-stack-services STACK=authentik-outpost-foundry
 
 deploy-crowdsec:
 	@echo ">>> Deploying crowdsec..."
 	(set -a && source $(CROWDSEC_ENV) && set +a && docker stack deploy --detach=true -c $(CROWDSEC_COMPOSE) crowdsec)
+	$(MAKE) --no-print-directory force-stack-services STACK=crowdsec
 
 deploy-portainer:
 	@echo ">>> Deploying portainer..."
 	(set -a && source $(PORTAINER_ENV) && set +a && docker stack deploy --detach=true -c $(PORTAINER_COMPOSE) portainer)
+	$(MAKE) --no-print-directory force-stack-services STACK=portainer
 
 deploy-foundry:
 	@echo ">>> Deploying foundry..."
 	docker stack deploy --detach=true -c $(FOUNDRY_COMPOSE) foundry
+	$(MAKE) --no-print-directory force-stack-services STACK=foundry
 
 deploy-n8n: setup-traefik-local-network
 	@echo ">>> Deploying n8n..."
 	(set -a && source $(N8N_ENV) && set +a && docker stack deploy --detach=true -c $(N8N_COMPOSE) n8n)
+	$(MAKE) --no-print-directory force-stack-services STACK=n8n
 
 deploy-waha: setup-traefik-local-network
 	@echo ">>> Deploying waha..."
 	(set -a && source $(WAHA_ENV) && set +a && docker stack deploy --detach=true -c $(WAHA_COMPOSE) waha)
+	$(MAKE) --no-print-directory force-stack-services STACK=waha
 
 deploy-qbittorrent:
 	@echo ">>> Deploying qbittorrent..."
 	docker stack deploy --detach=true -c $(QBITTORRENT_COMPOSE) qbittorrent
+	$(MAKE) --no-print-directory force-stack-services STACK=qbittorrent
 
 deploy-excalidraw:
 	@echo ">>> Deploying excalidraw..."
 	docker stack deploy --detach=true -c $(EXCALIDRAW_COMPOSE) excalidraw
+	$(MAKE) --no-print-directory force-stack-services STACK=excalidraw
 
 deploy-stremio:
 	@echo ">>> Ensuring local swarm is initialized..."
@@ -169,17 +191,19 @@ deploy-stremio:
 	docker image inspect $(STREMIO_WEB_IMAGE) >/dev/null
 	@echo ">>> Deploying stremio..."
 	docker stack deploy --detach=true --resolve-image never -c $(STREMIO_COMPOSE) stremio
+	$(MAKE) --no-print-directory force-stack-services STACK=stremio
 
 deploy-whoami: setup-traefik-network
 	@echo ">>> Deploying whoami..."
 	(set -a && source $(WHOAMI_ENV) && set +a && docker stack deploy --detach=true -c $(WHOAMI_COMPOSE) whoami)
+	$(MAKE) --no-print-directory force-stack-services STACK=whoami
 
 deploy-ollama:
 	@echo ">>> Deploying ollama..."
 	@if docker ps --format '{{.Names}}' | grep -qx 'job-application-automation-ollama'; then \
 		echo ">>> job-application-automation-ollama já fornece localhost:11434; pulando ollama."; \
 	else \
-		(cd $(OLLAMA_DIR) && docker compose up -d); \
+		(cd $(OLLAMA_DIR) && docker compose up -d --force-recreate); \
 	fi
 
 deploy-job-application-automation-ollama:
@@ -187,16 +211,17 @@ deploy-job-application-automation-ollama:
 	@if docker ps --format '{{.Names}}' | grep -qx 'ollama-local'; then \
 		echo ">>> ollama-local já fornece localhost:11434; pulando job-application-automation-ollama."; \
 	else \
-		(cd $(JOB_APPLICATION_AUTOMATION_DIR) && docker compose -f $(JOB_APPLICATION_AUTOMATION_OLLAMA_COMPOSE) up -d); \
+		(cd $(JOB_APPLICATION_AUTOMATION_DIR) && docker compose -f $(JOB_APPLICATION_AUTOMATION_OLLAMA_COMPOSE) up -d --force-recreate); \
 	fi
 
 deploy-fred: setup-traefik-local-network
 	@echo ">>> Deploying fred..."
 	(cd $(FRED_DIR) && docker compose down && docker compose build api && docker stack deploy --detach=true -c $(FRED_COMPOSE) fred)
+	$(MAKE) --no-print-directory force-stack-services STACK=fred
 
 deploy-curriculum-optimizer:
 	@echo ">>> Deploying curriculum-optimizer..."
-	(cd $(CURRICULUM_OPTIMIZER_DIR) && docker compose up -d --build)
+	(cd $(CURRICULUM_OPTIMIZER_DIR) && docker compose up -d --build --force-recreate)
 
 down:
 	@echo ">>> Removendo todos os stacks..."
