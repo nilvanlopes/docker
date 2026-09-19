@@ -10,6 +10,7 @@ ORDER=(
   authentik-outpost-traefik
   authentik-outpost-portainer
   authentik-outpost-foundry
+  authentik-outpost-n8n
   crowdsec
   portainer
   foundry
@@ -75,6 +76,7 @@ deploy_one() {
     authentik-outpost-traefik) "$MAKE_CMD" --no-print-directory deploy-authentik-outpost-traefik ;;
     authentik-outpost-portainer) "$MAKE_CMD" --no-print-directory deploy-authentik-outpost-portainer ;;
     authentik-outpost-foundry) "$MAKE_CMD" --no-print-directory deploy-authentik-outpost-foundry ;;
+    authentik-outpost-n8n) "$MAKE_CMD" --no-print-directory deploy-authentik-outpost-n8n ;;
     crowdsec) "$MAKE_CMD" --no-print-directory deploy-crowdsec ;;
     portainer) "$MAKE_CMD" --no-print-directory deploy-portainer ;;
     foundry) "$MAKE_CMD" --no-print-directory deploy-foundry ;;

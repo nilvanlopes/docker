@@ -87,6 +87,8 @@ deploy-foundry-signup
 deploy-authentik-outpost-traefik
 deploy-authentik-outpost-portainer
 deploy-authentik-outpost-foundry
+provision-authentik-n8n
+deploy-authentik-outpost-n8n
 deploy-crowdsec
 deploy-portainer
 deploy-foundry
@@ -109,6 +111,26 @@ make deploy-fred
 make deploy-stremio
 make deploy-curriculum-optimizer
 ```
+
+Para o primeiro deploy protegido do n8n, crie os objetos persistentes no
+Authentik e depois publique o outpost e as rotas:
+
+```bash
+read -rsp "Authentik API token: " AUTHENTIK_API_TOKEN; echo
+export AUTHENTIK_API_TOKEN
+make provision-authentik-n8n
+unset AUTHENTIK_API_TOKEN
+cp authentik/outposts/n8n/.env.example authentik/outposts/n8n/.env
+# preencha AUTHENTIK_TOKEN no .env local
+make deploy-authentik-outpost-n8n
+make deploy-traefik
+make deploy-n8n
+```
+
+O provisionador limita o editor ao usuário `pyu` por meio do grupo `n8n`.
+Webhooks e MCP usam exceções de caminho no Provider do Authentik para manter
+integrações automatizadas, mas continuam sujeitos ao CrowdSec e à
+autenticação nativa do n8n.
 
 `deploy-stremio` constrói a imagem local
 `stremio-web-official:development` a partir do submódulo
