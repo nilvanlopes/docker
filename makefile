@@ -82,6 +82,10 @@ deploy: setup-traefik-network setup-traefik-local-network setup-n8n-network
 all:
 	@:
 
+.PHONY: prepare-shutdown
+prepare-shutdown:
+	sudo bash ./scripts/prepare-wsl-shutdown.sh
+
 force-stack-services:
 	@test -n "$(STACK)" || { echo "ERRO: STACK é obrigatório." >&2; exit 1; }
 	@echo ">>> Forcing update of $(STACK) services..."

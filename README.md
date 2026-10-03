@@ -61,6 +61,45 @@ git submodule update --init --recursive
 
 ## Deploy
 
+### Reinício e desligamento no WSL
+
+Os serviços permanentes publicados no Swarm usam `restart_policy` com
+`condition: any`, `delay: 5s` (10s no agente Portainer) e `max_attempts: 0`.
+Assim o Swarm continua tentando recuperar tarefas mesmo após várias falhas
+ou uma saída normal. Serviços deliberadamente escalados para zero continuam
+parados. As políticas ficam nos Compose de cada submódulo; reiniciar o WSL
+não executa `make deploy` nem aplica alterações pendentes nesses arquivos.
+
+Antes de desligar, use no WSL:
+
+```bash
+make prepare-shutdown
+```
+
+Esse comando aguarda o Docker, o socket e o containerd pararem, verifica o
+resultado e sincroniza o disco. Ele não apaga stacks nem volumes. Se decidir
+continuar trabalhando: `sudo systemctl start containerd docker.socket docker`.
+
+Para preparar e encerrar em uma operação, execute **no PowerShell do Windows**:
+
+```powershell
+$script = '\\wsl.localhost\Ubuntu\home\pyu\docker\scripts\stop-wsl-safely.ps1'
+& $script -Action Wsl          # encerra somente Ubuntu
+# Ou, escolhendo uma única ação:
+& $script -Action ShutdownPC   # prepara Ubuntu e desliga o PC
+& $script -Action RestartPC    # prepara Ubuntu e reinicia o PC
+```
+
+Use `-WhatIf` para simular; ajuste `-Distribution` e `-Repository` se necessário.
+Uma falha na preparação impede o script de desligar o WSL/Windows.
+O script cuida do Docker desta distribuição, não de outras distribuições.
+Ele não intercepta o botão Desligar do Windows, `wsl --shutdown` direto,
+encerramentos automáticos ou cortes de energia. Nesses casos, as políticas
+ilimitadas permitem nova tentativa no boot, mas não garantem desligamento limpo.
+O WSL já precisa estar iniciado para o systemd iniciar o Docker.
+
+### Publicação dos serviços
+
 Os serviços publicados usam Docker Swarm. O `make deploy` cria as redes
 externas `traefik-public`, `traefik-local` e `n8n` e abre um seletor interativo
 com os serviços que ainda não estão em execução.
