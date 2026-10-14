@@ -2,3 +2,4 @@
 .codex
 qbittorrent/config/
 qbittorrent/downloads/
+__pycache__/
