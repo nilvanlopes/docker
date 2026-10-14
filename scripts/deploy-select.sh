@@ -5,6 +5,7 @@ MAKE_CMD="${MAKE_CMD:-make}"
 ORDER=(
   tunnel
   traefik
+  adguard
   authentik
   foundry-signup
   authentik-outpost-traefik
@@ -71,6 +72,7 @@ deploy_one() {
   case "$1" in
     tunnel) "$MAKE_CMD" --no-print-directory deploy-tunnel ;;
     traefik) "$MAKE_CMD" --no-print-directory deploy-traefik ;;
+    adguard) "$MAKE_CMD" --no-print-directory deploy-adguard ;;
     authentik) "$MAKE_CMD" --no-print-directory deploy-authentik ;;
     foundry-signup) "$MAKE_CMD" --no-print-directory deploy-foundry-signup ;;
     authentik-outpost-traefik) "$MAKE_CMD" --no-print-directory deploy-authentik-outpost-traefik ;;

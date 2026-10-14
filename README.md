@@ -1,9 +1,9 @@
 # Serviços Docker
 
 Repositório de orquestração do ambiente pessoal de serviços self-hosted de
-Nilvan Lopes. Cada diretório de serviço é um submódulo Git; o repositório raiz
-centraliza os arquivos Compose, as redes compartilhadas e os comandos de
-deploy, logs e reinício.
+Nilvan Lopes. Os diretórios de serviço, incluindo `adguard`, usam submódulos Git.
+O repositório centraliza
+as redes compartilhadas e os comandos de deploy, logs e reinício.
 
 ## Conteúdo
 
@@ -12,6 +12,7 @@ deploy, logs e reinício.
 | Diretório | Função |
 | --- | --- |
 | [`traefik`](./traefik) | Reverse proxy, TLS e descoberta de serviços no Swarm |
+| [`adguard`](./adguard) | DNS local para Fred, WAHA e AdGuard, com encaminhamento externo |
 | [`cloudflare_tunnel`](./cloudflare_tunnel) | Túnel Cloudflare até o Traefik |
 | [`authentik`](./authentik) | Identidade e autenticação, incluindo outposts |
 | [`crowdsec`](./crowdsec) | Detecção e bloqueio de tráfego malicioso |
@@ -61,42 +62,14 @@ git submodule update --init --recursive
 
 ## Deploy
 
-### Reinício e desligamento no WSL
+### Reinício dos serviços
 
 Os serviços permanentes publicados no Swarm usam `restart_policy` com
 `condition: any`, `delay: 5s` (10s no agente Portainer) e `max_attempts: 0`.
 Assim o Swarm continua tentando recuperar tarefas mesmo após várias falhas
 ou uma saída normal. Serviços deliberadamente escalados para zero continuam
-parados. As políticas ficam nos Compose de cada submódulo; reiniciar o WSL
+parados. As políticas ficam nos Compose de cada submódulo; reiniciar o servidor
 não executa `make deploy` nem aplica alterações pendentes nesses arquivos.
-
-Antes de desligar, use no WSL:
-
-```bash
-make prepare-shutdown
-```
-
-Esse comando aguarda o Docker, o socket e o containerd pararem, verifica o
-resultado e sincroniza o disco. Ele não apaga stacks nem volumes. Se decidir
-continuar trabalhando: `sudo systemctl start containerd docker.socket docker`.
-
-Para preparar e encerrar em uma operação, execute **no PowerShell do Windows**:
-
-```powershell
-$script = '\\wsl.localhost\Ubuntu\home\pyu\docker\scripts\stop-wsl-safely.ps1'
-& $script -Action Wsl          # encerra somente Ubuntu
-# Ou, escolhendo uma única ação:
-& $script -Action ShutdownPC   # prepara Ubuntu e desliga o PC
-& $script -Action RestartPC    # prepara Ubuntu e reinicia o PC
-```
-
-Use `-WhatIf` para simular; ajuste `-Distribution` e `-Repository` se necessário.
-Uma falha na preparação impede o script de desligar o WSL/Windows.
-O script cuida do Docker desta distribuição, não de outras distribuições.
-Ele não intercepta o botão Desligar do Windows, `wsl --shutdown` direto,
-encerramentos automáticos ou cortes de energia. Nesses casos, as políticas
-ilimitadas permitem nova tentativa no boot, mas não garantem desligamento limpo.
-O WSL já precisa estar iniciado para o systemd iniciar o Docker.
 
 ### Publicação dos serviços
 
@@ -121,12 +94,13 @@ aos alvos definidos no [`makefile`](./makefile):
 ```text
 deploy-tunnel
 deploy-traefik
+deploy-adguard
+setup-traefik-local-lan
 deploy-authentik
 deploy-foundry-signup
 deploy-authentik-outpost-traefik
 deploy-authentik-outpost-portainer
 deploy-authentik-outpost-foundry
-provision-authentik-n8n
 deploy-authentik-outpost-n8n
 deploy-crowdsec
 deploy-portainer
@@ -155,10 +129,6 @@ Para o primeiro deploy protegido do n8n, crie os objetos persistentes no
 Authentik e depois publique o outpost e as rotas:
 
 ```bash
-read -rsp "Authentik API token: " AUTHENTIK_API_TOKEN; echo
-export AUTHENTIK_API_TOKEN
-make provision-authentik-n8n
-unset AUTHENTIK_API_TOKEN
 cp authentik/outposts/n8n/.env.example authentik/outposts/n8n/.env
 # preencha AUTHENTIK_TOKEN no .env local
 make deploy-authentik-outpost-n8n
@@ -166,10 +136,9 @@ make deploy-traefik
 make deploy-n8n
 ```
 
-O provisionador limita o editor ao usuário `pyu` por meio do grupo `n8n`.
-Webhooks e MCP usam exceções de caminho no Provider do Authentik para manter
-integrações automatizadas, mas continuam sujeitos ao CrowdSec e à
-autenticação nativa do n8n.
+O editor usa Authentik. Webhooks e MCP usam rotas próprias no Traefik, sem
+exigir sessão de navegador, e continuam sujeitos ao CrowdSec e à autenticação
+nativa do n8n.
 
 `deploy-stremio` constrói a imagem local
 `stremio-web-official:development` a partir do submódulo
@@ -179,6 +148,42 @@ local e evita subir uma segunda instância quando já existe um provedor Ollama
 em execução.
 
 ## Operação
+
+### DNS e serviços locais no Windows
+
+O Windows usa **192.168.10.91 como servidor DNS**. Fred, WAHA e AdGuard
+resolvem para esse mesmo IP e abrem em HTTP sem informar porta:
+
+- `http://waha.localnetwork` abre o dashboard do WAHA.
+- `http://adguard.localnetwork` abre o painel do AdGuard.
+- `http://fred.localnetwork` encaminha à API do Fred; `/health` verifica sua saúde.
+
+O DNS encaminha consultas externas exclusivamente para `170.239.224.25` e
+`170.239.224.30`. O navegador conecta diretamente aos sites externos depois
+da resolução. Os serviços locais não passam pelo Cloudflare Tunnel; a antiga
+entrada 8181 foi removida. Use `.localnetwork`, não `.localhost`.
+
+Mantenha `.91` fora do pool DHCP do roteador. No PowerShell do Windows,
+como administrador, configure o adaptador correto e a resolução local:
+
+```powershell
+Set-DnsClientServerAddress -InterfaceAlias 'Wi-Fi' -ServerAddresses '192.168.10.91'
+Add-DnsClientNrptRule -Namespace '.localnetwork' -NameServers '192.168.10.91' -DisplayName 'AdGuardLocal'
+Clear-DnsClientCache
+Resolve-DnsName waha.localnetwork -Type A
+```
+
+A regra NRPT direciona os nomes locais ao AdGuard mesmo com DNS IPv6 anunciado
+pelo roteador. Mantenha IPv6 habilitado. Remova as entradas antigas desses nomes
+em `C:\Windows\System32\drivers\etc\hosts`. Navegadores com DNS seguro próprio
+precisam usar o resolvedor do sistema para esses nomes.
+
+Para publicar os componentes: `make deploy-adguard` e `make deploy-traefik`.
+O próprio Makefile prepara a rede LAN; não há script auxiliar. Dados e senha do
+AdGuard ficam em `adguard/data/`, preservados nos novos deploys. O Linux isola
+`.91` do próprio host `.90`; teste a partir do Windows/LAN.
+
+### Comandos comuns
 
 ```bash
 # Ver ajuda e alvos disponíveis
@@ -201,8 +206,9 @@ operações específicas, consulte o README do respectivo submódulo.
 
 ## Arquitetura resumida
 
-Traefik é o ponto de entrada HTTP/HTTPS e usa as redes overlay externas
-`traefik-public` e `traefik-local`. O Cloudflare Tunnel encaminha o tráfego
+O Traefik público é o ponto de entrada HTTPS do Tunnel na rede overlay
+`traefik-public`. O mesmo Traefik possui a entrada `traefik_local` em `.91`, com
+acesso aos backends pela rede `traefik-local`. O Cloudflare Tunnel encaminha o tráfego
 externo ao Traefik; Authentik protege rotas privadas; CrowdSec analisa os logs
 do Traefik e fornece o bloqueio pelo bouncer.
 

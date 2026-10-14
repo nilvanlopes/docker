@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help all deploy force-stack-services provision-authentik-n8n deploy-tunnel deploy-traefik deploy-authentik deploy-foundry-signup deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-authentik-outpost-n8n deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-authentik-outpost-n8n logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-excalidraw logs-stremio logs-whoami logs-ollama logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-authentik-outpost-n8n restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-excalidraw restart-stremio restart-whoami restart-ollama restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
+.PHONY: help all deploy force-stack-services deploy-tunnel deploy-traefik deploy-authentik deploy-foundry-signup deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-authentik-outpost-n8n deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-authentik-outpost-n8n logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-excalidraw logs-stremio logs-whoami logs-ollama logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-authentik-outpost-n8n restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-excalidraw restart-stremio restart-whoami restart-ollama restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
 
 # Caminhos dos arquivos compose e variáveis de ambiente
 TUNNEL_COMPOSE := cloudflare_tunnel/docker-compose.yml
@@ -43,9 +43,13 @@ CURRICULUM_OPTIMIZER_DIR := curriculum-optimizer
 FRED_DIR := fred
 FRED_COMPOSE := docker-compose.yml
 
+.PHONY: deploy-adguard setup-traefik-local-lan logs-adguard restart-adguard
+
 
 help:
 	@echo "Comandos disponíveis:"
+	@echo "  make deploy-adguard    - Provisionar e publicar DNS AdGuard interno"
+	@echo "  make setup-traefik-local-lan - Preparar o IP 192.168.10.91 para o Traefik"
 	@echo "  make deploy            - Deploy todos os stacks na ordem"
 	@echo "  make deploy-tunnel     - Deploy apenas cloudflare tunnel"
 	@echo "  make deploy-traefik    - Deploy apenas traefik"
@@ -54,7 +58,6 @@ help:
 	@echo "  make deploy-authentik-outpost-traefik - Deploy do outpost do Authentik para o dashboard do Traefik"
 	@echo "  make deploy-authentik-outpost-portainer - Deploy do outpost do Authentik para o Portainer"
 	@echo "  make deploy-authentik-outpost-foundry - Deploy do outpost do Authentik para o Foundry"
-	@echo "  make provision-authentik-n8n - Criar Application, Provider, grupo e Outpost do n8n no Authentik"
 	@echo "  make deploy-authentik-outpost-n8n - Deploy do outpost do Authentik para o n8n"
 	@echo "  make deploy-crowdsec   - Deploy apenas crowdsec"
 	@echo "  make deploy-portainer  - Deploy apenas portainer"
@@ -82,10 +85,6 @@ deploy: setup-traefik-network setup-traefik-local-network setup-n8n-network
 all:
 	@:
 
-.PHONY: prepare-shutdown
-prepare-shutdown:
-	sudo bash ./scripts/prepare-wsl-shutdown.sh
-
 force-stack-services:
 	@test -n "$(STACK)" || { echo "ERRO: STACK é obrigatório." >&2; exit 1; }
 	@echo ">>> Forcing update of $(STACK) services..."
@@ -111,19 +110,29 @@ deploy-tunnel:
 	docker stack deploy --detach=true -c $(TUNNEL_COMPOSE) tunnel
 	$(MAKE) --no-print-directory force-stack-services STACK=tunnel
 
-deploy-traefik: setup-traefik-network setup-traefik-local-network
+deploy-traefik: setup-traefik-network setup-traefik-local-network setup-traefik-local-lan
 	@echo ">>> Deploying traefik..."
 	(set -a && source $(TRAEFIK_ENV) && set +a && docker stack deploy --detach=true -c $(TRAEFIK_COMPOSE) traefik)
 	$(MAKE) --no-print-directory force-stack-services STACK=traefik
+
+deploy-adguard: setup-traefik-local-network
+	@umask 077; mkdir -p adguard/data/conf adguard/data/work
+	docker stack deploy --detach=true -c adguard/docker-compose.yml adguard
+
+setup-traefik-local-lan:
+	@docker network inspect traefik_local_lan_node >/dev/null 2>&1 || docker network create --config-only --subnet=192.168.10.0/24 --gateway=192.168.10.1 --ip-range=192.168.10.91/32 -o parent=bond0 -o ipvlan_mode=l2 traefik_local_lan_node
+	@docker network inspect traefik_local_lan >/dev/null 2>&1 || docker network create --driver=ipvlan --scope=swarm --config-from=traefik_local_lan_node traefik_local_lan
+
+logs-adguard:
+	docker service logs -f adguard_adguardhome
+
+restart-adguard:
+	docker service update --force adguard_adguardhome
 
 deploy-authentik:
 	@echo ">>> Deploying authentik..."
 	(set -a && source $(AUTHENTIK_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_COMPOSE) authentik)
 	$(MAKE) --no-print-directory force-stack-services STACK=authentik
-
-provision-authentik-n8n:
-	@echo ">>> Provisioning Authentik objects for n8n..."
-	@./scripts/provision-authentik-n8n.sh
 
 deploy-foundry-signup: setup-traefik-network
 	@echo ">>> Building foundry signup image..."
@@ -243,6 +252,7 @@ deploy-curriculum-optimizer:
 
 down:
 	@echo ">>> Removendo todos os stacks..."
+	-docker stack rm adguard
 	-docker stack rm qbittorrent
 	-docker stack rm foundry
 	-docker stack rm portainer

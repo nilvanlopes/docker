@@ -52,3 +52,6 @@
 [submodule "curriculum-optimizer"]
 	path = curriculum-optimizer
 	url = https://github.com/nilvanlopes/curriculum-optimizer.git
+[submodule "adguard"]
+	path = adguard
+	url = https://github.com/nilvanlopes/adguard.git
