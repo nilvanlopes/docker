@@ -151,10 +151,11 @@ em execução.
 
 ### DNS e serviços locais no Windows
 
-O Windows usa **192.168.10.91 como servidor DNS**. Fred, WAHA e AdGuard
+O Windows usa **192.168.10.91 como servidor DNS**. Fred, WAHA, Stremio e AdGuard
 resolvem para esse mesmo IP e abrem em HTTP sem informar porta:
 
 - `http://waha.localnetwork` abre o dashboard do WAHA.
+- `http://stremio.localnetwork` abre o painel web do Stremio.
 - `http://adguard.localnetwork` abre o painel do AdGuard.
 - `http://fred.localnetwork` encaminha à API do Fred; `/health` verifica sua saúde.
 
