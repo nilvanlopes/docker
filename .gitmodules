@@ -55,3 +55,6 @@
 [submodule "adguard"]
 	path = adguard
 	url = https://github.com/nilvanlopes/adguard.git
+[submodule "fichamutantes"]
+	path = fichamutantes
+	url = https://github.com/nilvanlopes/fichaMutantes.git
