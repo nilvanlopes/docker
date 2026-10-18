@@ -1,0 +1,124 @@
+services:
+  web:
+    image: fichamutantes:latest
+    read_only: true
+    volumes:
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 16777216
+    cap_drop:
+      - ALL
+    networks:
+      - traefik-public
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == pyuserver
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 0
+      update_config:
+        order: start-first
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  api:
+    image: fichamutantes-api:latest
+    read_only: true
+    cap_drop:
+      - ALL
+    environment:
+      DB_HOST: postgres
+      DB_NAME: fichamutantes
+      DB_USER: fichamutantes
+      DB_PASSWORD_FILE: /run/secrets/fichamutantes_db_password
+      PUBLIC_ORIGIN: https://fichamutantes.nilvanlopes.com
+      AUTHENTIK_AUTH_URL: http://authentik-outpost-fichamutantes_proxy:9000/outpost.goauthentik.io/auth/traefik
+    secrets:
+      - source: fichamutantes_db_password
+        target: fichamutantes_db_password
+        uid: "1000"
+        gid: "1000"
+        mode: 0400
+    networks:
+      - traefik-public
+      - database
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == pyuserver
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 0
+      update_config:
+        order: start-first
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 45s
+
+  postgres:
+    image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    environment:
+      POSTGRES_DB: fichamutantes
+      POSTGRES_USER: fichamutantes
+      POSTGRES_PASSWORD_FILE: /run/secrets/fichamutantes_db_password
+    secrets:
+      - fichamutantes_db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - database
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == pyuserver
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 0
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "fichamutantes", "-d", "fichamutantes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  traefik-public:
+    external: true
+  database:
+    driver: overlay
+    internal: true
+
+volumes:
+  postgres_data:
+
+secrets:
+  fichamutantes_db_password:
+    external: true
