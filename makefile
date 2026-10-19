@@ -13,9 +13,6 @@ CROWDSEC_COMPOSE := crowdsec/docker-compose.yml
 CROWDSEC_ENV := crowdsec/.env
 AUTHENTIK_COMPOSE := authentik/docker-compose.yml
 AUTHENTIK_ENV := authentik/.env
-FOUNDRY_SIGNUP_COMPOSE := authentik/foundry-signup/docker-compose.yml
-FOUNDRY_SIGNUP_ENV := authentik/foundry-signup/.env
-FOUNDRY_SIGNUP_DIR := authentik/foundry-signup
 AUTHENTIK_OUTPOST_TRAEFIK_COMPOSE := authentik/outposts/traefik/docker-compose.yml
 AUTHENTIK_OUTPOST_TRAEFIK_ENV := authentik/outposts/traefik/.env
 AUTHENTIK_OUTPOST_PORTAINER_COMPOSE := authentik/outposts/portainer/docker-compose.yml
@@ -42,19 +39,30 @@ CURRICULUM_OPTIMIZER_COMPOSE := curriculum-optimizer/docker-compose.yml
 CURRICULUM_OPTIMIZER_DIR := curriculum-optimizer
 FRED_DIR := fred
 FRED_COMPOSE := docker-compose.yml
+FICHASRPG_DIR := fichasrpg
+FICHASRPG_ENV := $(FICHASRPG_DIR)/.env
+FICHASRPG_IMAGE := fichasrpg:latest
+FICHASRPG_API_IMAGE := fichasrpg-api:latest
+AUTHENTIK_OUTPOST_FICHASRPG_COMPOSE := authentik/outposts/fichasrpg/docker-compose.yml
+AUTHENTIK_OUTPOST_FICHASRPG_ENV := authentik/outposts/fichasrpg/.env
+
+.PHONY: deploy-fichasrpg deploy-authentik-outpost-fichasrpg logs-fichasrpg restart-fichasrpg
 
 .PHONY: deploy-adguard setup-traefik-local-lan logs-adguard restart-adguard
+.PHONY: logs-authentik-outpost-fichasrpg restart-authentik-outpost-fichasrpg
 
 
 help:
 	@echo "Comandos disponíveis:"
+	@echo "  make deploy-fichasrpg - Build e deploy do portal Fichas de RPG"
+	@echo "  make deploy-authentik-outpost-fichasrpg - Deploy do outpost do portal RPG"
 	@echo "  make deploy-adguard    - Provisionar e publicar DNS AdGuard interno"
 	@echo "  make setup-traefik-local-lan - Preparar o IP 192.168.10.91 para o Traefik"
 	@echo "  make deploy            - Deploy todos os stacks na ordem"
 	@echo "  make deploy-tunnel     - Deploy apenas cloudflare tunnel"
 	@echo "  make deploy-traefik    - Deploy apenas traefik"
 	@echo "  make deploy-authentik  - Deploy apenas authentik"
-	@echo "  make deploy-foundry-signup - Build e deploy da pagina de cadastro do Foundry"
+	@echo "  make deploy-foundry-signup - Alvo legado desativado; use o portal Fichas de RPG"
 	@echo "  make deploy-authentik-outpost-traefik - Deploy do outpost do Authentik para o dashboard do Traefik"
 	@echo "  make deploy-authentik-outpost-portainer - Deploy do outpost do Authentik para o Portainer"
 	@echo "  make deploy-authentik-outpost-foundry - Deploy do outpost do Authentik para o Foundry"
@@ -134,12 +142,9 @@ deploy-authentik:
 	(set -a && source $(AUTHENTIK_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_COMPOSE) authentik)
 	$(MAKE) --no-print-directory force-stack-services STACK=authentik
 
-deploy-foundry-signup: setup-traefik-network
-	@echo ">>> Building foundry signup image..."
-	docker build -t foundry-signup:latest $(FOUNDRY_SIGNUP_DIR)
-	@echo ">>> Deploying foundry signup..."
-	(set -a && source $(FOUNDRY_SIGNUP_ENV) && set +a && docker stack deploy --detach=true -c $(FOUNDRY_SIGNUP_COMPOSE) foundry-signup)
-	$(MAKE) --no-print-directory force-stack-services STACK=foundry-signup
+deploy-foundry-signup:
+	@echo "ERRO: o cadastro foi integrado ao portal Fichas de RPG. Use make deploy-fichasrpg." >&2
+	@exit 1
 
 deploy-authentik-outpost-traefik: setup-traefik-network
 	@echo ">>> Deploying authentik outpost for traefik..."
@@ -166,6 +171,22 @@ deploy-crowdsec:
 	@echo ">>> Deploying crowdsec..."
 	(set -a && source $(CROWDSEC_ENV) && set +a && docker stack deploy --detach=true -c $(CROWDSEC_COMPOSE) crowdsec)
 	$(MAKE) --no-print-directory force-stack-services STACK=crowdsec
+
+deploy-authentik-outpost-fichasrpg: setup-traefik-network
+	@test -f $(AUTHENTIK_OUTPOST_FICHASRPG_ENV) || { echo "ERRO: copie authentik/outposts/fichasrpg/.env.example para .env e preencha o token do outpost configurado no Authentik." >&2; exit 1; }
+	(set -a && source $(AUTHENTIK_OUTPOST_FICHASRPG_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_OUTPOST_FICHASRPG_COMPOSE) authentik-outpost-fichasrpg)
+	$(MAKE) --no-print-directory force-stack-services STACK=authentik-outpost-fichasrpg
+
+deploy-fichasrpg: setup-traefik-network
+	@test -f $(FICHASRPG_ENV) || { echo "ERRO: $(FICHASRPG_ENV) precisa conter as credenciais atuais de cadastro." >&2; exit 1; }
+	@docker secret inspect fichasrpg_db_password >/dev/null
+	@docker volume inspect fichasrpg_postgres_data >/dev/null
+	@(set -a && source $(FICHASRPG_ENV) && set +a && docker stack config -c "$(FICHASRPG_DIR)/docker-compose.yml" >/dev/null)
+	docker build --target api -t $(FICHASRPG_API_IMAGE) "$(FICHASRPG_DIR)"
+	docker build --target web -t $(FICHASRPG_IMAGE) "$(FICHASRPG_DIR)"
+	(set -a && source $(FICHASRPG_ENV) && set +a && docker stack deploy --detach=true --resolve-image never -c "$(FICHASRPG_DIR)/docker-compose.yml" fichasrpg)
+	docker service update --force fichasrpg_api
+	docker service update --force fichasrpg_web
 
 deploy-portainer:
 	@echo ">>> Deploying portainer..."
@@ -252,6 +273,8 @@ deploy-curriculum-optimizer:
 
 down:
 	@echo ">>> Removendo todos os stacks..."
+	-docker stack rm fichasrpg
+	-docker stack rm authentik-outpost-fichasrpg
 	-docker stack rm adguard
 	-docker stack rm qbittorrent
 	-docker stack rm foundry
@@ -279,6 +302,12 @@ down:
 
 logs-tunnel:
 	docker service logs -f tunnel_cloudflared
+
+logs-fichasrpg:
+	docker service logs -f fichasrpg_api
+
+logs-authentik-outpost-fichasrpg:
+	docker service logs -f authentik-outpost-fichasrpg_proxy
 
 logs-traefik:
 	docker service logs -f traefik_traefik
@@ -342,6 +371,11 @@ logs-curriculum-optimizer:
 
 restart-tunnel:
 	docker service update --force tunnel_cloudflared
+
+restart-fichasrpg: deploy-fichasrpg
+
+restart-authentik-outpost-fichasrpg:
+	docker service update --force authentik-outpost-fichasrpg_proxy
 
 restart-traefik:
 	docker service update --force traefik_traefik

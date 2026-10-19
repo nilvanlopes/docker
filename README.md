@@ -21,7 +21,7 @@ as redes compartilhadas e os comandos de deploy, logs e reinício.
 | [`waha`](./waha) | API HTTP para WhatsApp |
 | [`fred`](./fred) | API do Vôlei Frederico e processamento de conversas |
 | [`foundry`](./foundry) | Foundry Virtual Tabletop |
-| [`authentik/foundry-signup`](./authentik/foundry-signup) | Página de cadastro do Foundry |
+| [`fichasrpg`](./fichasrpg) | Portal React para Mutantes & Malfeitores e Vampiro: A Máscara |
 | [`qbittorrent`](./qbittorrent) | Cliente BitTorrent |
 | [`excalidraw`](./excalidraw) | Canvas para o MCP do Excalidraw |
 | [`stremio`](./stremio) | Stremio Server e interface web local |
@@ -97,14 +97,15 @@ deploy-traefik
 deploy-adguard
 setup-traefik-local-lan
 deploy-authentik
-deploy-foundry-signup
 deploy-authentik-outpost-traefik
 deploy-authentik-outpost-portainer
 deploy-authentik-outpost-foundry
+deploy-authentik-outpost-fichasrpg
 deploy-authentik-outpost-n8n
 deploy-crowdsec
 deploy-portainer
 deploy-foundry
+deploy-fichasrpg
 deploy-n8n
 deploy-waha
 deploy-qbittorrent
@@ -124,6 +125,48 @@ make deploy-fred
 make deploy-stremio
 make deploy-curriculum-optimizer
 ```
+
+Para o portal unificado em `https://fichasrpg.nilvanlopes.com`:
+
+O código da aplicação está no submódulo `fichasrpg/`, ligado ao repositório
+[nilvanlopes/fichasrpg](https://github.com/nilvanlopes/fichasrpg). O repositório
+anterior `fichaMutantes` foi renomeado com seu histórico. O cadastro, as fichas
+e a API ficam nesse projeto; Authentik e Traefik ficam nos submódulos de
+infraestrutura. O outpost do portal fica em `authentik/outposts/fichasrpg/`.
+
+Preencha `fichasrpg/.env` com base em `fichasrpg/.env.example` antes do primeiro
+deploy. Esse arquivo contém os tokens e credenciais usados pelo backend e é
+ignorado pelo Git. O ambiente atual já teve essas credenciais migradas.
+
+```bash
+make deploy-authentik-outpost-fichasrpg
+make deploy-fichasrpg
+```
+
+Configure a aplicação, o grupo `fichasrpg-users` e o outpost pelo painel do
+Authentik; salve o token do outpost em `authentik/outposts/fichasrpg/.env`.
+O ambiente atual já tem esses objetos configurados. Contas que só têm acesso
+ao Foundry não são adicionadas automaticamente. Cadastros convidados entram no
+grupo das fichas; o acesso ao Foundry continua separado. Uma conta pode ter
+várias fichas em cada sistema. Os bancos foram renomeados para `fichasrpg` e
+`fichasrpg_dev`; a migração copiou os dados para o volume
+`fichasrpg_postgres_data` e converteu as fichas existentes sem apagá-las.
+
+O deploy usa os alvos Docker do `makefile`, sem scripts de provisionamento,
+e carrega as credenciais de `fichasrpg/.env`. O secret `fichasrpg_db_password`
+e o volume persistente `fichasrpg_postgres_data` devem existir antes do deploy.
+Os identificadores da stack,
+banco, volume, rede e secret usam `fichasrpg`; os dados do PostgreSQL são
+migrados para o volume novo durante a troca. O código legado em
+`authentik/foundry-signup/` foi mantido para a transição. Exporte a ficha
+de Vampiro antiga em `fichavampiro.netlify.app` e importe o JSON na nova ficha.
+As rotas públicas do portal ficam em
+`traefik/infra/traefik/dynamic/fichasrpg.yml`. O Traefik acompanha essa pasta
+e aplica as alterações automaticamente. Edite as configurações diretamente
+em `dynamic/`; não há uma etapa de cópia de modelos para ativá-las.
+No cliente OAuth do Google, autorize o callback
+`https://fichasrpg.nilvanlopes.com/api/oauth/google/callback`.
+O backend deriva esse endereço da URL pública do portal.
 
 Para o primeiro deploy protegido do n8n, crie os objetos persistentes no
 Authentik e depois publique o outpost e as rotas:
@@ -151,13 +194,17 @@ em execução.
 
 ### DNS e serviços locais no Windows
 
-O Windows usa **192.168.10.91 como servidor DNS**. Fred, WAHA, Stremio e AdGuard
+O Windows usa **192.168.10.91 como servidor DNS**. Fred, WAHA, Stremio, Fichas de RPG e AdGuard
 resolvem para esse mesmo IP e abrem em HTTP sem informar porta:
+
+A regra DNS curinga `*.localnetwork` aponta subdomínios para `192.168.10.91`,
+então não é necessário cadastrar cada hostname separadamente no AdGuard.
 
 - `http://waha.localnetwork` abre o dashboard do WAHA.
 - `http://stremio.localnetwork` abre o painel web do Stremio.
 - `http://adguard.localnetwork` abre o painel do AdGuard.
 - `http://fred.localnetwork` encaminha à API do Fred; `/health` verifica sua saúde.
+- `http://fichasrpg.localnetwork` abre o portal em desenvolvimento enquanto `make dev` estiver rodando.
 
 O DNS encaminha consultas externas exclusivamente para `170.239.224.25` e
 `170.239.224.30`. O navegador conecta diretamente aos sites externos depois

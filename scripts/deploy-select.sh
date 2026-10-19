@@ -7,14 +7,15 @@ ORDER=(
   traefik
   adguard
   authentik
-  foundry-signup
   authentik-outpost-traefik
   authentik-outpost-portainer
   authentik-outpost-foundry
+  authentik-outpost-fichasrpg
   authentik-outpost-n8n
   crowdsec
   portainer
   foundry
+  fichasrpg
   n8n
   waha
   qbittorrent
@@ -61,6 +62,8 @@ is_running_ollama_provider() {
 service_is_running() {
   case "$1" in
     ollama) is_running_ollama_provider ;;
+    fichasrpg) is_running_stack fichasrpg ;;
+    authentik-outpost-fichasrpg) is_running_stack authentik-outpost-fichasrpg ;;
     job-application-automation-ollama) is_running_ollama_provider ;;
     fred) is_running_compose fred ;;
     curriculum-optimizer) is_running_compose curriculum-optimizer ;;
@@ -74,14 +77,15 @@ deploy_one() {
     traefik) "$MAKE_CMD" --no-print-directory deploy-traefik ;;
     adguard) "$MAKE_CMD" --no-print-directory deploy-adguard ;;
     authentik) "$MAKE_CMD" --no-print-directory deploy-authentik ;;
-    foundry-signup) "$MAKE_CMD" --no-print-directory deploy-foundry-signup ;;
     authentik-outpost-traefik) "$MAKE_CMD" --no-print-directory deploy-authentik-outpost-traefik ;;
     authentik-outpost-portainer) "$MAKE_CMD" --no-print-directory deploy-authentik-outpost-portainer ;;
     authentik-outpost-foundry) "$MAKE_CMD" --no-print-directory deploy-authentik-outpost-foundry ;;
+    authentik-outpost-fichasrpg) "$MAKE_CMD" --no-print-directory deploy-authentik-outpost-fichasrpg ;;
     authentik-outpost-n8n) "$MAKE_CMD" --no-print-directory deploy-authentik-outpost-n8n ;;
     crowdsec) "$MAKE_CMD" --no-print-directory deploy-crowdsec ;;
     portainer) "$MAKE_CMD" --no-print-directory deploy-portainer ;;
     foundry) "$MAKE_CMD" --no-print-directory deploy-foundry ;;
+    fichasrpg) "$MAKE_CMD" --no-print-directory deploy-fichasrpg ;;
     n8n) "$MAKE_CMD" --no-print-directory deploy-n8n ;;
     waha) "$MAKE_CMD" --no-print-directory deploy-waha ;;
     qbittorrent) "$MAKE_CMD" --no-print-directory deploy-qbittorrent ;;
