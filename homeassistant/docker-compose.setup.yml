@@ -1,9 +1,0 @@
-# Usado com docker-compose.yml somente durante o primeiro acesso via SSH.
-services:
-  homeassistant:
-    ports:
-      - "127.0.0.1:18123:8123"
-
-volumes:
-  homeassistant_config:
-    name: homeassistant_homeassistant_config

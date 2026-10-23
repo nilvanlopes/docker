@@ -58,3 +58,9 @@
 [submodule "fichasrpg"]
 	path = fichasrpg
 	url = https://github.com/nilvanlopes/fichasrpg.git
+[submodule "9router"]
+	path = 9router
+	url = https://github.com/nilvanlopes/9router.git
+[submodule "homeassistant"]
+	path = homeassistant
+	url = https://github.com/nilvanlopes/homeassistant.git
