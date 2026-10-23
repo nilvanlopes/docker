@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help all deploy force-stack-services deploy-tunnel deploy-traefik deploy-authentik deploy-foundry-signup deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-authentik-outpost-n8n deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-authentik-outpost-n8n logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-excalidraw logs-stremio logs-whoami logs-ollama logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-authentik-outpost-n8n restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-excalidraw restart-stremio restart-whoami restart-ollama restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
+.PHONY: help all deploy force-stack-services deploy-tunnel deploy-traefik deploy-authentik deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-authentik-outpost-n8n deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-authentik-outpost-n8n logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-excalidraw logs-stremio logs-whoami logs-ollama logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-authentik-outpost-n8n restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-excalidraw restart-stremio restart-whoami restart-ollama restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
 
 # Caminhos dos arquivos compose e variáveis de ambiente
 TUNNEL_COMPOSE := cloudflare_tunnel/docker-compose.yml
@@ -21,6 +21,9 @@ AUTHENTIK_OUTPOST_FOUNDRY_COMPOSE := authentik/outposts/foundry/docker-compose.y
 AUTHENTIK_OUTPOST_FOUNDRY_ENV := authentik/outposts/foundry/.env
 AUTHENTIK_OUTPOST_N8N_COMPOSE := authentik/outposts/n8n/docker-compose.yml
 AUTHENTIK_OUTPOST_N8N_ENV := authentik/outposts/n8n/.env
+HOMEASSISTANT_COMPOSE := homeassistant/docker-compose.yml
+HOMEASSISTANT_SETUP_COMPOSE := homeassistant/docker-compose.setup.yml
+HOMEASSISTANT_SETUP := docker compose -p homeassistant-setup -f $(HOMEASSISTANT_COMPOSE) -f $(HOMEASSISTANT_SETUP_COMPOSE)
 N8N_COMPOSE := n8n/docker-compose.yml
 N8N_ENV := n8n/.env
 WAHA_COMPOSE := waha/docker-compose.yml
@@ -39,6 +42,7 @@ CURRICULUM_OPTIMIZER_COMPOSE := curriculum-optimizer/docker-compose.yml
 CURRICULUM_OPTIMIZER_DIR := curriculum-optimizer
 FRED_DIR := fred
 FRED_COMPOSE := docker-compose.yml
+NINEROUTER_DIR := 9router
 FICHASRPG_DIR := fichasrpg
 FICHASRPG_ENV := $(FICHASRPG_DIR)/.env
 FICHASRPG_IMAGE := fichasrpg:latest
@@ -50,11 +54,15 @@ AUTHENTIK_OUTPOST_FICHASRPG_ENV := authentik/outposts/fichasrpg/.env
 
 .PHONY: deploy-adguard setup-traefik-local-lan logs-adguard restart-adguard
 .PHONY: logs-authentik-outpost-fichasrpg restart-authentik-outpost-fichasrpg
+.PHONY: deploy-9router logs-9router restart-9router
+.PHONY: deploy-homeassistant logs-homeassistant restart-homeassistant
+.PHONY: setup-homeassistant stop-homeassistant-setup
 
 
 help:
 	@echo "  make deploy-meu-site - Build e deploy do site privado do pyu"
 	@echo "Comandos disponíveis:"
+	@echo "  make deploy-9router   - Build e deploy local do 9router na LAN"
 	@echo "  make deploy-fichasrpg - Build e deploy do portal Fichas de RPG"
 	@echo "  make deploy-authentik-outpost-fichasrpg - Deploy do outpost do portal RPG"
 	@echo "  make deploy-adguard    - Provisionar e publicar DNS AdGuard interno"
@@ -63,11 +71,13 @@ help:
 	@echo "  make deploy-tunnel     - Deploy apenas cloudflare tunnel"
 	@echo "  make deploy-traefik    - Deploy apenas traefik"
 	@echo "  make deploy-authentik  - Deploy apenas authentik"
-	@echo "  make deploy-foundry-signup - Alvo legado desativado; use o portal Fichas de RPG"
 	@echo "  make deploy-authentik-outpost-traefik - Deploy do outpost do Authentik para o dashboard do Traefik"
 	@echo "  make deploy-authentik-outpost-portainer - Deploy do outpost do Authentik para o Portainer"
 	@echo "  make deploy-authentik-outpost-foundry - Deploy do outpost do Authentik para o Foundry"
 	@echo "  make deploy-authentik-outpost-n8n - Deploy do outpost do Authentik para o n8n"
+	@echo "  make deploy-homeassistant - Deploy do Home Assistant"
+	@echo "  make setup-homeassistant - Primeiro acesso ao Home Assistant por túnel SSH"
+	@echo "  make stop-homeassistant-setup - Encerrar o acesso temporário, preservando os dados"
 	@echo "  make deploy-crowdsec   - Deploy apenas crowdsec"
 	@echo "  make deploy-portainer  - Deploy apenas portainer"
 	@echo "  make deploy-foundry    - Deploy apenas foundry"
@@ -143,10 +153,6 @@ deploy-authentik:
 	(set -a && source $(AUTHENTIK_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_COMPOSE) authentik)
 	$(MAKE) --no-print-directory force-stack-services STACK=authentik
 
-deploy-foundry-signup:
-	@echo "ERRO: o cadastro foi integrado ao portal Fichas de RPG. Use make deploy-fichasrpg." >&2
-	@exit 1
-
 deploy-authentik-outpost-traefik: setup-traefik-network
 	@echo ">>> Deploying authentik outpost for traefik..."
 	(set -a && source $(AUTHENTIK_OUTPOST_TRAEFIK_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_OUTPOST_TRAEFIK_COMPOSE) authentik-outpost-traefik)
@@ -167,6 +173,21 @@ deploy-authentik-outpost-n8n: setup-traefik-network
 	@test -f $(AUTHENTIK_OUTPOST_N8N_ENV) || { echo "ERRO: $(AUTHENTIK_OUTPOST_N8N_ENV) não existe; copie o .env.example e preencha AUTHENTIK_TOKEN." >&2; exit 1; }
 	(set -a && source $(AUTHENTIK_OUTPOST_N8N_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_OUTPOST_N8N_COMPOSE) authentik-outpost-n8n)
 	$(MAKE) --no-print-directory force-stack-services STACK=authentik-outpost-n8n
+
+setup-homeassistant: setup-traefik-network
+	@if docker service inspect homeassistant_homeassistant >/dev/null 2>&1; then echo "ERRO: a stack Home Assistant já existe; não inicie outra instância no mesmo volume." >&2; exit 1; fi
+	$(HOMEASSISTANT_SETUP) up -d --wait
+	@echo "Acesso temporário em 127.0.0.1:18123 no servidor. Consulte homeassistant/README.md para abrir o túnel SSH."
+
+stop-homeassistant-setup:
+	$(HOMEASSISTANT_SETUP) down
+
+deploy-homeassistant: setup-traefik-network
+	@echo ">>> Deploying homeassistant..."
+	@setup_containers="$$($(HOMEASSISTANT_SETUP) ps -q --status running)" && { test -z "$$setup_containers" || { echo "ERRO: finalize a configuração e execute make stop-homeassistant-setup antes do deploy Swarm." >&2; exit 1; }; }
+	@docker stack config -c $(HOMEASSISTANT_COMPOSE) >/dev/null
+	docker stack deploy --detach=true -c $(HOMEASSISTANT_COMPOSE) homeassistant
+	$(MAKE) --no-print-directory force-stack-services STACK=homeassistant
 
 deploy-crowdsec:
 	@echo ">>> Deploying crowdsec..."
@@ -272,8 +293,15 @@ deploy-curriculum-optimizer:
 	@echo ">>> Deploying curriculum-optimizer..."
 	(cd $(CURRICULUM_OPTIMIZER_DIR) && docker compose up -d --build --force-recreate)
 
+deploy-9router: setup-traefik-local-network
+	@test -f $(NINEROUTER_DIR)/.env || { echo "ERRO: gere 9router/.env conforme 9router/README.md." >&2; exit 1; }
+	(cd $(NINEROUTER_DIR) && docker compose config --quiet && docker compose up -d --build --wait)
+
 down:
 	@echo ">>> Removendo todos os stacks..."
+	-$(HOMEASSISTANT_SETUP) down
+	-docker stack rm homeassistant
+	-@if [ -f $(NINEROUTER_DIR)/.env ]; then cd $(NINEROUTER_DIR) && docker compose down; fi
 	-docker stack rm fichasrpg
 	-docker stack rm authentik-outpost-fichasrpg
 	-docker stack rm adguard
@@ -314,7 +342,7 @@ logs-traefik:
 	docker service logs -f traefik_traefik
 
 logs-authentik:
-	docker service logs -f authentik_authentik
+	docker service logs -f authentik_server
 
 logs-foundry-signup:
 	docker service logs -f foundry-signup_foundry-signup
@@ -343,6 +371,9 @@ logs-foundry:
 logs-n8n:
 	docker service logs -f n8n_n8n-main
 
+logs-homeassistant:
+	docker service logs -f homeassistant_homeassistant
+
 logs-waha:
 	docker service logs -f waha_waha
 
@@ -369,6 +400,9 @@ logs-fred:
 
 logs-curriculum-optimizer:
 	(cd $(CURRICULUM_OPTIMIZER_DIR) && docker compose logs -f)
+
+logs-9router:
+	(cd $(NINEROUTER_DIR) && docker compose logs -f --tail=100)
 
 restart-tunnel:
 	docker service update --force tunnel_cloudflared
@@ -411,6 +445,9 @@ restart-foundry:
 restart-n8n:
 	docker service update --force n8n_n8n-main
 
+restart-homeassistant:
+	docker service update --force homeassistant_homeassistant
+
 restart-waha:
 	docker service update --force waha_waha
 
@@ -439,6 +476,9 @@ restart-fred:
 
 restart-curriculum-optimizer:
 	(cd $(CURRICULUM_OPTIMIZER_DIR) && docker compose restart)
+
+restart-9router:
+	(cd $(NINEROUTER_DIR) && docker compose restart)
 
 # Site estático privado, com outpost Authentik dedicado.
 .PHONY: deploy-meu-site deploy-authentik-outpost-meu-site logs-meu-site restart-meu-site

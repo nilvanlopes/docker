@@ -18,7 +18,9 @@ ORDER=(
   fichasrpg
   meu-site
   n8n
+  homeassistant
   waha
+  9router
   qbittorrent
   excalidraw
   stremio
@@ -68,6 +70,7 @@ service_is_running() {
     job-application-automation-ollama) is_running_ollama_provider ;;
     fred) is_running_compose fred ;;
     curriculum-optimizer) is_running_compose curriculum-optimizer ;;
+    9router) is_running_compose 9router ;;
     *) is_running_stack "$1" ;;
   esac
 }
@@ -89,7 +92,9 @@ deploy_one() {
     fichasrpg) "$MAKE_CMD" --no-print-directory deploy-fichasrpg ;;
     meu-site) "$MAKE_CMD" --no-print-directory deploy-meu-site ;;
     n8n) "$MAKE_CMD" --no-print-directory deploy-n8n ;;
+    homeassistant) "$MAKE_CMD" --no-print-directory deploy-homeassistant ;;
     waha) "$MAKE_CMD" --no-print-directory deploy-waha ;;
+    9router) "$MAKE_CMD" --no-print-directory deploy-9router ;;
     qbittorrent) "$MAKE_CMD" --no-print-directory deploy-qbittorrent ;;
     excalidraw) "$MAKE_CMD" --no-print-directory deploy-excalidraw ;;
     stremio) "$MAKE_CMD" --no-print-directory deploy-stremio ;;

@@ -1,7 +1,8 @@
 # Serviços Docker
 
 Repositório de orquestração do ambiente pessoal de serviços self-hosted de
-Nilvan Lopes. Os diretórios de serviço, incluindo `adguard`, usam submódulos Git.
+Nilvan Lopes. A maioria dos diretórios de serviço, incluindo `adguard`, usa submódulos Git;
+`9router` e `homeassistant` mantêm os arquivos de infraestrutura diretamente neste repositório.
 O repositório centraliza
 as redes compartilhadas e os comandos de deploy, logs e reinício.
 
@@ -18,7 +19,9 @@ as redes compartilhadas e os comandos de deploy, logs e reinício.
 | [`crowdsec`](./crowdsec) | Detecção e bloqueio de tráfego malicioso |
 | [`portainer`](./portainer) | Administração do Docker Swarm |
 | [`n8n`](./n8n) | Automação de workflows com PostgreSQL e Redis |
+| [`homeassistant`](./homeassistant) | Automação residencial com login nativo e CrowdSec |
 | [`waha`](./waha) | API HTTP para WhatsApp |
+| [`9router`](./9router) | Gateway de IA com build próprio Alpine, disponível somente na LAN |
 | [`fred`](./fred) | API do Vôlei Frederico e processamento de conversas |
 | [`foundry`](./foundry) | Foundry Virtual Tabletop |
 | [`fichasrpg`](./fichasrpg) | Portal React para Mutantes & Malfeitores e Vampiro: A Máscara |
@@ -109,7 +112,11 @@ deploy-foundry
 deploy-fichasrpg
 deploy-meu-site
 deploy-n8n
+deploy-homeassistant
+setup-homeassistant
+stop-homeassistant-setup
 deploy-waha
+deploy-9router
 deploy-qbittorrent
 deploy-excalidraw
 deploy-stremio
@@ -148,27 +155,31 @@ make deploy-fichasrpg
 Configure a aplicação, o grupo `fichasrpg-users` e o outpost pelo painel do
 Authentik; salve o token do outpost em `authentik/outposts/fichasrpg/.env`.
 O ambiente atual já tem esses objetos configurados. Contas que só têm acesso
-ao Foundry não são adicionadas automaticamente. Cadastros convidados entram no
+ao Foundry não são adicionadas automaticamente. Cadastros abertos pelo FichasRPG entram somente no
 grupo das fichas; o acesso ao Foundry continua separado. Uma conta pode ter
 várias fichas em cada sistema. Os bancos foram renomeados para `fichasrpg` e
 `fichasrpg_dev`; a migração copiou os dados para o volume
 `fichasrpg_postgres_data` e converteu as fichas existentes sem apagá-las.
 
-O deploy usa os alvos Docker do `makefile`, sem scripts de provisionamento,
-e carrega as credenciais de `fichasrpg/.env`. O secret `fichasrpg_db_password`
-e o volume persistente `fichasrpg_postgres_data` devem existir antes do deploy.
-Os identificadores da stack,
-banco, volume, rede e secret usam `fichasrpg`; os dados do PostgreSQL são
-migrados para o volume novo durante a troca. O código legado em
-`authentik/foundry-signup/` foi mantido para a transição. Exporte a ficha
-de Vampiro antiga em `fichavampiro.netlify.app` e importe o JSON na nova ficha.
-As rotas públicas do portal ficam em
-`traefik/infra/traefik/dynamic/fichasrpg.yml`. O Traefik acompanha essa pasta
-e aplica as alterações automaticamente. Edite as configurações diretamente
-em `dynamic/`; não há uma etapa de cópia de modelos para ativá-las.
-No cliente OAuth do Google, autorize o callback
-`https://fichasrpg.nilvanlopes.com/api/oauth/google/callback`.
-O backend deriva esse endereço da URL pública do portal.
+O deploy usa os alvos Docker do `makefile` e carrega `fichasrpg/.env`.
+O secret `fichasrpg_db_password` e o volume `fichasrpg_postgres_data` devem
+existir. As migrações do nome antigo e do banco já foram concluídas.
+O cadastro e o tema são reaplicados com:
+
+```bash
+python3 authentik/fichasrpg-signup/configure.py --apply
+python3 authentik/branding/apply-theme.py --apply
+```
+
+As rotas ficam somente em `traefik/infra/traefik/dynamic/`, acompanhadas
+diretamente pelo Traefik. O login usa `login-fichasrpg.nilvanlopes.com` e o
+callback Google é
+`https://login-fichasrpg.nilvanlopes.com/source/oauth/callback/google-fichasrpg/`.
+O backend do portal não troca tokens Google.
+
+O serviço `authentik/foundry-signup/` continua atendendo separadamente ao
+cadastro por convite do Foundry em `signup.nilvanlopes.com`. Ele não é usado
+pelo cadastro aberto do FichasRPG.
 
 O site pessoal usa `https://meusite.nilvanlopes.com`. Para provisionar o
 grupo exclusivo `meu-site`, a política, o outpost e o DNS, empacotar a
@@ -197,6 +208,21 @@ O editor usa Authentik. Webhooks e MCP usam rotas próprias no Traefik, sem
 exigir sessão de navegador, e continuam sujeitos ao CrowdSec e à autenticação
 nativa do n8n.
 
+O Home Assistant usa `https://homeassistant.nilvanlopes.com` tanto no navegador
+quanto no app Companion, com autenticação nativa e CrowdSec. O serviço não
+usa outpost do Authentik. Para uma instalação nova, siga o primeiro acesso
+local e configure a confiança no Traefik conforme o
+[README do serviço](./homeassistant/README.md). Depois, publique:
+
+```bash
+make deploy-homeassistant
+```
+
+A URL externa e o bloqueio após cinco tentativas de login inválidas já estão
+configurados na instalação atual. O segundo fator deve ser ativado pelo
+próprio usuário no perfil do Home Assistant. O antigo hostname
+`homeassistant-app.nilvanlopes.com` foi retirado das rotas.
+
 `deploy-stremio` constrói a imagem local
 `stremio-web-official:development` a partir do submódulo
 [`stremio/stremio-web`](./stremio/stremio-web) antes de publicar a stack.
@@ -215,6 +241,7 @@ A regra DNS curinga `*.localnetwork` aponta subdomínios para `192.168.10.91`,
 então não é necessário cadastrar cada hostname separadamente no AdGuard.
 
 - `http://waha.localnetwork` abre o dashboard do WAHA.
+- `http://9router.localnetwork` abre o dashboard do 9router; clientes usam `/v1` com API key.
 - `http://stremio.localnetwork` abre o painel web do Stremio.
 - `http://adguard.localnetwork` abre o painel do AdGuard.
 - `http://fred.localnetwork` encaminha à API do Fred; `/health` verifica sua saúde.
@@ -242,8 +269,16 @@ precisam usar o resolvedor do sistema para esses nomes.
 
 Para publicar os componentes: `make deploy-adguard` e `make deploy-traefik`.
 O próprio Makefile prepara a rede LAN; não há script auxiliar. Dados e senha do
-AdGuard ficam em `adguard/data/`, preservados nos novos deploys. O Linux isola
-`.91` do próprio host `.90`; teste a partir do Windows/LAN.
+AdGuard ficam em `adguard/data/`, preservados nos novos deploys.
+
+### Acesso .localnetwork no próprio servidor Linux
+
+O host `.90`, que roda o Docker Swarm, precisa de uma configuração adicional
+para chegar ao `.91` pela rede IPvlan. A pasta
+[acesso-localnetwork-host](./traefik/acesso-localnetwork-host/README.md) guarda os
+arquivos e os comandos para o próprio servidor usar o AdGuard como DNS dos
+nomes `.localnetwork` e acessar os serviços pelo Traefik. Essa configuração
+já está instalada no servidor atual.
 
 ### Comandos comuns
 
@@ -278,7 +313,7 @@ O n8n usa PostgreSQL, Redis e a rede externa `n8n`. O WAHA e o Fred integram-se
 aos workflows do n8n pela rede local. Os demais serviços são publicados por
 suas respectivas stacks e redes descritas nos Compose locais.
 
-Nem tudo é uma stack Swarm: Ollama, `curriculum-optimizer` e os modos locais
+Nem tudo é uma stack Swarm: 9router, Ollama, `curriculum-optimizer` e os modos locais
 de Fred/job-application-automation usam `docker compose`; o site pessoal e o
 job-application-automation também podem ser executados pelos seus próprios
 fluxos de desenvolvimento.
