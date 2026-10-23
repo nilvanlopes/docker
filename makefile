@@ -53,6 +53,7 @@ AUTHENTIK_OUTPOST_FICHASRPG_ENV := authentik/outposts/fichasrpg/.env
 
 
 help:
+	@echo "  make deploy-meu-site - Build e deploy do site privado do pyu"
 	@echo "Comandos disponíveis:"
 	@echo "  make deploy-fichasrpg - Build e deploy do portal Fichas de RPG"
 	@echo "  make deploy-authentik-outpost-fichasrpg - Deploy do outpost do portal RPG"
@@ -438,3 +439,24 @@ restart-fred:
 
 restart-curriculum-optimizer:
 	(cd $(CURRICULUM_OPTIMIZER_DIR) && docker compose restart)
+
+# Site estático privado, com outpost Authentik dedicado.
+.PHONY: deploy-meu-site deploy-authentik-outpost-meu-site logs-meu-site restart-meu-site
+
+deploy-meu-site: setup-traefik-network
+	python3 scripts/setup-meu-site.py
+	docker stack config -c meu-site/docker-compose.yml >/dev/null
+	docker build -t meu-site:latest meu-site
+	$(MAKE) --no-print-directory deploy-authentik-outpost-meu-site
+	docker stack deploy --detach=true --resolve-image never -c meu-site/docker-compose.yml meu-site
+	docker service update --force meu-site_web
+
+deploy-authentik-outpost-meu-site: setup-traefik-network
+	@test -f authentik/outposts/meu-site/.env || { echo "ERRO: execute python3 scripts/setup-meu-site.py" >&2; exit 1; }
+	@(set -a && source authentik/outposts/meu-site/.env && set +a && docker stack deploy --detach=true -c authentik/outposts/meu-site/docker-compose.yml authentik-outpost-meu-site)
+
+logs-meu-site:
+	docker service logs -f meu-site_web
+
+restart-meu-site:
+	docker service update --force meu-site_web

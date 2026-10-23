@@ -22,6 +22,7 @@ as redes compartilhadas e os comandos de deploy, logs e reinício.
 | [`fred`](./fred) | API do Vôlei Frederico e processamento de conversas |
 | [`foundry`](./foundry) | Foundry Virtual Tabletop |
 | [`fichasrpg`](./fichasrpg) | Portal React para Mutantes & Malfeitores e Vampiro: A Máscara |
+| [`meu-site`](./meu-site/DEPLOY.md) | Site pessoal privado, com CrowdSec e acesso Authentik exclusivo do pyu |
 | [`qbittorrent`](./qbittorrent) | Cliente BitTorrent |
 | [`excalidraw`](./excalidraw) | Canvas para o MCP do Excalidraw |
 | [`stremio`](./stremio) | Stremio Server e interface web local |
@@ -106,6 +107,7 @@ deploy-crowdsec
 deploy-portainer
 deploy-foundry
 deploy-fichasrpg
+deploy-meu-site
 deploy-n8n
 deploy-waha
 deploy-qbittorrent
@@ -167,6 +169,18 @@ em `dynamic/`; não há uma etapa de cópia de modelos para ativá-las.
 No cliente OAuth do Google, autorize o callback
 `https://fichasrpg.nilvanlopes.com/api/oauth/google/callback`.
 O backend deriva esse endereço da URL pública do portal.
+
+O site pessoal usa `https://meusite.nilvanlopes.com`. Para provisionar o
+grupo exclusivo `meu-site`, a política, o outpost e o DNS, empacotar a
+aplicação e publicar as duas stacks:
+
+```bash
+make deploy-meu-site
+```
+
+O provisionamento reutiliza as credenciais locais existentes e permite somente
+`pyu`. Veja os recursos, os arquivos e as verificações no
+[guia de deploy do site](./meu-site/DEPLOY.md).
 
 Para o primeiro deploy protegido do n8n, crie os objetos persistentes no
 Authentik e depois publique o outpost e as rotas:

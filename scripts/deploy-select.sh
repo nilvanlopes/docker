@@ -16,6 +16,7 @@ ORDER=(
   portainer
   foundry
   fichasrpg
+  meu-site
   n8n
   waha
   qbittorrent
@@ -86,6 +87,7 @@ deploy_one() {
     portainer) "$MAKE_CMD" --no-print-directory deploy-portainer ;;
     foundry) "$MAKE_CMD" --no-print-directory deploy-foundry ;;
     fichasrpg) "$MAKE_CMD" --no-print-directory deploy-fichasrpg ;;
+    meu-site) "$MAKE_CMD" --no-print-directory deploy-meu-site ;;
     n8n) "$MAKE_CMD" --no-print-directory deploy-n8n ;;
     waha) "$MAKE_CMD" --no-print-directory deploy-waha ;;
     qbittorrent) "$MAKE_CMD" --no-print-directory deploy-qbittorrent ;;
