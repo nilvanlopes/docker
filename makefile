@@ -64,7 +64,7 @@ AUTHENTIK_OUTPOST_FICHASRPG_ENV := authentik/outposts/fichasrpg/.env
 help:
 	@echo "  make deploy-meu-site - Build e deploy do site privado do pyu"
 	@echo "Comandos disponíveis:"
-	@echo "  make deploy-9router   - Build e deploy local do 9router na LAN"
+	@echo "  make deploy-9router   - Build e deploy Swarm do 9router na LAN"
 	@echo "  make deploy-fichasrpg - Build e deploy do portal Fichas de RPG"
 	@echo "  make deploy-authentik-outpost-fichasrpg - Deploy do outpost do portal RPG"
 	@echo "  make deploy-adguard    - Provisionar e publicar DNS AdGuard interno"
@@ -324,13 +324,13 @@ deploy-curriculum-optimizer:
 
 deploy-9router: setup-traefik-local-network
 	@test -f $(NINEROUTER_DIR)/.env || { echo "ERRO: gere 9router/.env conforme 9router/README.md." >&2; exit 1; }
-	(cd $(NINEROUTER_DIR) && docker compose config --quiet && docker compose up -d --build --wait)
+	$(NINEROUTER_DIR)/deploy.py
 
 down:
 	@echo ">>> Removendo todos os stacks..."
 	-$(HOMEASSISTANT_SETUP) down
 	-docker stack rm homeassistant
-	-@if [ -f $(NINEROUTER_DIR)/.env ]; then cd $(NINEROUTER_DIR) && docker compose down; fi
+	-docker stack rm ninerouter
 	-docker stack rm fichasrpg
 	-docker stack rm authentik-outpost-fichasrpg
 	-docker stack rm adguard
@@ -432,7 +432,7 @@ logs-curriculum-optimizer:
 	(cd $(CURRICULUM_OPTIMIZER_DIR) && docker compose logs -f)
 
 logs-9router:
-	(cd $(NINEROUTER_DIR) && docker compose logs -f --tail=100)
+	docker service logs -f --tail=100 ninerouter_9router
 
 restart-tunnel:
 	docker service update --force tunnel_cloudflared
@@ -508,7 +508,7 @@ restart-curriculum-optimizer:
 	(cd $(CURRICULUM_OPTIMIZER_DIR) && docker compose restart)
 
 restart-9router:
-	(cd $(NINEROUTER_DIR) && docker compose restart)
+	docker service update --force ninerouter_9router
 
 # Site estático privado, com outpost Authentik dedicado.
 .PHONY: deploy-meu-site deploy-authentik-outpost-meu-site logs-meu-site restart-meu-site
