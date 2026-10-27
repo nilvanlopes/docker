@@ -26,6 +26,7 @@ ORDER=(
   stremio
   whoami
   ollama
+  floci
   job-application-automation-ollama
   fred
   curriculum-optimizer
@@ -100,6 +101,7 @@ deploy_one() {
     stremio) "$MAKE_CMD" --no-print-directory deploy-stremio ;;
     whoami) "$MAKE_CMD" --no-print-directory deploy-whoami ;;
     ollama) "$MAKE_CMD" --no-print-directory deploy-ollama ;;
+    floci) "$MAKE_CMD" --no-print-directory deploy-floci ;;
     job-application-automation-ollama) "$MAKE_CMD" --no-print-directory deploy-job-application-automation-ollama ;;
     fred) "$MAKE_CMD" --no-print-directory deploy-fred ;;
     curriculum-optimizer) "$MAKE_CMD" --no-print-directory deploy-curriculum-optimizer ;;

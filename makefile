@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help all deploy force-stack-services deploy-tunnel deploy-traefik deploy-authentik deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-authentik-outpost-n8n deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-authentik-outpost-n8n logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-excalidraw logs-stremio logs-whoami logs-ollama logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-authentik-outpost-n8n restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-excalidraw restart-stremio restart-whoami restart-ollama restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
+.PHONY: help all deploy force-stack-services deploy-tunnel deploy-traefik deploy-authentik deploy-authentik-outpost-traefik deploy-authentik-outpost-portainer deploy-authentik-outpost-foundry deploy-authentik-outpost-n8n deploy-crowdsec deploy-portainer deploy-foundry deploy-n8n deploy-waha deploy-qbittorrent deploy-excalidraw deploy-stremio deploy-whoami deploy-ollama deploy-floci deploy-job-application-automation-ollama deploy-fred deploy-curriculum-optimizer down logs-tunnel logs-traefik logs-authentik logs-foundry-signup logs-authentik-outpost-traefik logs-authentik-outpost-portainer logs-authentik-outpost-foundry logs-authentik-outpost-n8n logs-crowdsec logs-portainer logs-foundry logs-n8n logs-waha logs-qbittorrent logs-excalidraw logs-stremio logs-whoami logs-ollama logs-floci logs-job-application-automation-ollama logs-fred logs-curriculum-optimizer restart-tunnel restart-traefik restart-crowdsec restart-authentik restart-foundry-signup restart-authentik-outpost-traefik restart-authentik-outpost-portainer restart-authentik-outpost-foundry restart-authentik-outpost-n8n restart-crowdsec restart-portainer restart-foundry restart-n8n restart-waha restart-qbittorrent restart-excalidraw restart-stremio restart-whoami restart-ollama restart-floci restart-job-application-automation-ollama restart-fred restart-curriculum-optimizer
 
 # Caminhos dos arquivos compose e variáveis de ambiente
 TUNNEL_COMPOSE := cloudflare_tunnel/docker-compose.yml
@@ -36,6 +36,7 @@ STREMIO_WEB_IMAGE := stremio-web-official:development
 WHOAMI_COMPOSE := whoami/docker-compose.yml
 WHOAMI_ENV := whoami/.env
 OLLAMA_DIR := ollama
+FLOCI_COMPOSE := floci/docker-compose.yml
 JOB_APPLICATION_AUTOMATION_DIR := job-application-automation
 JOB_APPLICATION_AUTOMATION_OLLAMA_COMPOSE := docker-compose.ollama.yml
 CURRICULUM_OPTIMIZER_COMPOSE := curriculum-optimizer/docker-compose.yml
@@ -57,6 +58,7 @@ AUTHENTIK_OUTPOST_FICHASRPG_ENV := authentik/outposts/fichasrpg/.env
 .PHONY: deploy-9router logs-9router restart-9router
 .PHONY: deploy-homeassistant logs-homeassistant restart-homeassistant
 .PHONY: setup-homeassistant stop-homeassistant-setup
+.PHONY: setup-floci-network setup-floci-assets setup-floci-drawings
 
 
 help:
@@ -88,6 +90,9 @@ help:
 	@echo "  make deploy-stremio    - Deploy apenas stremio"
 	@echo "  make deploy-whoami     - Deploy apenas whoami"
 	@echo "  make deploy-ollama     - Deploy apenas ollama local"
+	@echo "  make deploy-floci      - Publicar Floci privado e proxy público de leitura"
+	@echo "  make setup-floci-assets - Criar o bucket público de assets do FichasRPG"
+	@echo "  make setup-floci-drawings - Criar o bucket privado de desenhos por ficha"
 	@echo "  make deploy-job-application-automation-ollama - Deploy do Ollama gerenciado pelo job-application-automation"
 	@echo "  make deploy-fred      - Deploy apenas fred"
 	@echo "  make deploy-curriculum-optimizer - Deploy local do curriculum-optimizer"
@@ -199,7 +204,7 @@ deploy-authentik-outpost-fichasrpg: setup-traefik-network
 	(set -a && source $(AUTHENTIK_OUTPOST_FICHASRPG_ENV) && set +a && docker stack deploy --detach=true -c $(AUTHENTIK_OUTPOST_FICHASRPG_COMPOSE) authentik-outpost-fichasrpg)
 	$(MAKE) --no-print-directory force-stack-services STACK=authentik-outpost-fichasrpg
 
-deploy-fichasrpg: setup-traefik-network
+deploy-fichasrpg: setup-traefik-network setup-floci-drawings
 	@test -f $(FICHASRPG_ENV) || { echo "ERRO: $(FICHASRPG_ENV) precisa conter as credenciais atuais de cadastro." >&2; exit 1; }
 	@docker secret inspect fichasrpg_db_password >/dev/null
 	@docker volume inspect fichasrpg_postgres_data >/dev/null
@@ -276,6 +281,30 @@ deploy-ollama:
 		(cd $(OLLAMA_DIR) && docker compose up -d --force-recreate); \
 	fi
 
+setup-floci-network: setup-traefik-network
+	@set -e; \
+	if docker network inspect floci-internal >/dev/null 2>&1; then \
+		test "$$(docker network inspect floci-internal --format '{{.Driver}} {{.Attachable}} {{.Internal}}')" = "overlay true true" || { echo "ERRO: floci-internal precisa ser overlay, attachable e internal." >&2; exit 1; }; \
+	else \
+		docker network create --driver overlay --attachable --internal floci-internal; \
+	fi
+
+deploy-floci: setup-floci-network
+	@echo ">>> Publicando Floci S3 no Swarm..."
+	docker stack deploy --detach=true -c $(FLOCI_COMPOSE) floci
+
+logs-floci:
+	docker service logs -f floci_floci
+
+restart-floci:
+	docker service update --force floci_floci
+
+setup-floci-assets:
+	./floci/setup-assets-bucket.sh
+
+setup-floci-drawings: deploy-floci
+	./floci/setup-drawings-bucket.sh
+
 deploy-job-application-automation-ollama:
 	@echo ">>> Deploying job-application-automation ollama..."
 	@if docker ps --format '{{.Names}}' | grep -qx 'ollama-local'; then \
@@ -323,6 +352,7 @@ down:
 	-docker stack rm stremio
 	-docker stack rm whoami
 	-docker stack rm fred
+	-docker stack rm floci
 	-(cd $(OLLAMA_DIR) && docker compose down)
 	-(cd $(JOB_APPLICATION_AUTOMATION_DIR) && docker compose -f $(JOB_APPLICATION_AUTOMATION_OLLAMA_COMPOSE) down)
 	-(cd $(FRED_DIR) && docker compose down)

@@ -34,6 +34,7 @@ as redes compartilhadas e os comandos de deploy, logs e reinício.
 ### Ferramentas locais e projetos relacionados
 
 - [`ollama`](./ollama): Ollama local com suporte à GPU.
+- [`floci`](./floci): bucket S3 de imagens do FichasRPG; objetos públicos passam pelo Tunnel, Traefik e proxy somente leitura.
 - [`job-application-automation`](./job-application-automation): automação de
   candidaturas; também contém uma opção Compose para seu Ollama.
 - [`curriculum-optimizer`](./curriculum-optimizer): geração e validação de
@@ -122,6 +123,8 @@ deploy-excalidraw
 deploy-stremio
 deploy-whoami
 deploy-ollama
+deploy-floci
+setup-floci-assets
 deploy-job-application-automation-ollama
 deploy-fred
 deploy-curriculum-optimizer
@@ -133,6 +136,8 @@ Exemplos:
 make deploy-fred
 make deploy-stremio
 make deploy-curriculum-optimizer
+make deploy-floci
+make setup-floci-assets
 ```
 
 Para o portal unificado em `https://fichasrpg.nilvanlopes.com`:
